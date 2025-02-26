@@ -1,12 +1,37 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-      "environmentName": {
-        "value": "${AZURE_ENV_NAME}"
-      },
-      "location": {
-        "value": "${AZURE_LOCATION}"
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "ghrunnerExists": {
+      "value": "${SERVICE_GH_RUNNER_EXISTS=false}"
+    },
+    "ghRunnerDefinition": {
+      "value": {
+        "settings": [
+          {
+            "name": "GH_URL",
+            "value": "https://github.com/${REPO_OWNER}/${REPO_NAME}"
+          },
+          {
+            "name": "REGISTRATION_TOKEN_API_URL",
+            "value": "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
+          },
+          {
+            "name": "GITHUB_PAT",
+            "value": "${GITHUB_PAT}",
+            "secret": true
+          }
+        ]
       }
+    },
+    "principalId": {
+      "value": "${AZURE_PRINCIPAL_ID}"
     }
+  }
 }
