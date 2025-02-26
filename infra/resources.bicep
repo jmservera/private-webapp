@@ -7,6 +7,7 @@ param sqlAdminPassword string
 param tags object = {}
 @description('Id of the user or app to assign application roles')
 param principalId string
+param ghRunnerDefinition object
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -128,13 +129,7 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.6.1' = {
         }
       }
       {
-        objectId: backendIdentity.outputs.principalId
-        permissions: {
-          secrets: ['get', 'list']
-        }
-      }
-      {
-        objectId: frontendIdentity.outputs.principalId
+        objectId: ghRunnerAppIdentity.outputs.principalId
         permissions: {
           secrets: ['get', 'list']
         }
@@ -172,6 +167,17 @@ module ghRunnerFetchLatestImage './modules/fetch-container-image.bicep' = {
     name: 'ghrunner'
   }
 }
+
+var ghRunnerAppSettingsArray = filter(array(ghRunnerDefinition.settings), i => i.name != '')
+var ghRunnerSecrets = map(filter(ghRunnerAppSettingsArray, i => i.?secret != null), i => {
+  name: i.name
+  value: i.value
+  secretRef: i.?secretRef ?? take(replace(replace(toLower(i.name), '_', '-'), '.', '-'), 32)
+})
+var ghRunnerEnv = map(filter(ghRunnerAppSettingsArray, i => i.?secret == null), i => {
+  name: i.name
+  value: i.value
+})
 
 module ghRunner 'br/public:avm/res/app/container-app:0.8.0' = {
   name: 'ghrunner'
@@ -212,8 +218,8 @@ module ghRunner 'br/public:avm/res/app/container-app:0.8.0' = {
               value: '5001'
             }
           ],
-          backendEnv,
-          map(backendSecrets, secret => {
+          ghRunnerEnv,
+          map(ghRunnerSecrets, secret => {
             name: secret.name
             secretRef: secret.secretRef
           })
@@ -251,3 +257,8 @@ output frontendUrl string = frontEndApp.outputs.url
 output frontendId string = frontEndApp.outputs.id
 output backendId string = backEndApp.outputs.id
 output sqlServerId string = sqlDb.outputs.serverId
+
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
+output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
+output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
+output AZURE_RESOURCE_GHRUNNER_ID string = ghRunner.outputs.resourceId

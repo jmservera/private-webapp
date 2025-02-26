@@ -8,7 +8,7 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
-    "ghrunnerExists": {
+    "ghRunnerExists": {
       "value": "${SERVICE_GH_RUNNER_EXISTS=false}"
     },
     "ghRunnerDefinition": {

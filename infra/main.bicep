@@ -6,6 +6,7 @@ targetScope = 'subscription'
 param environmentName string
 
 param ghRunnerExists bool
+param ghRunnerDefinition object
 
 @minLength(1)
 @description('Primary location for all resources')
@@ -42,5 +43,12 @@ module resources './resources.bicep' = {
     ghRunnerExists: ghRunnerExists
     tags: tags
     location: location
+    principalId: principalId
+    ghRunnerDefinition: ghRunnerDefinition
   }
 }
+
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
+output AZURE_KEY_VAULT_ENDPOINT string = resources.outputs.AZURE_KEY_VAULT_ENDPOINT
+output AZURE_KEY_VAULT_NAME string = resources.outputs.AZURE_KEY_VAULT_NAME
+output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
