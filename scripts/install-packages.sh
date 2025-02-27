@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-ORIGINAL_USR=$(whoami)
 echo "Installing required packages."
 
 # Update package lists
@@ -28,8 +27,11 @@ systemctl start docker
 
 
 # Print completion message
-echo "Package installation completed successfully for user ${ORIGINAL_USR}!"
+echo "Package installation completed successfully!"
+RUNAS="sudo -iu $USER"
 
+$RUNAS bash<<_
+echo "Installing the self-hosted runner..."
 # Create a folder
 mkdir actions-runner && cd actions-runner
 # Download the latest runner package
@@ -40,13 +42,14 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 echo "Runner package extracted successfully!"
 
 echo "Configuring the self-hosted runner with user ${USER}..."
-
-sudo -u $USER bash -c "./config.sh --url \"https://github.com/$REPO_OWNER/$REPO_NAME\" --token \"$GITHUB_PAT\""
-
+./config.sh --url "https://github.com/$REPO_OWNER/$REPO_NAME" --token "$GITHUB_PAT"
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
-./svc.sh install
+sudo ./svc.sh install
 echo "Runner installed successfully!"
 echo "Starting the self-hosted runner service..."
-./svc.sh start
+sudo ./svc.sh start
 echo "Runner service started successfully!"
+_
+
+echo "Self-hosted runner installation completed successfully!"
