@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+ORIGINAL_USR=$(whoami)
+echo "Installing required packages with user ${ORIGINAL_USR}."
+
 # Update package lists
 apt-get update
 
@@ -36,8 +39,8 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
 echo "Runner package extracted successfully!"
 
-echo "Configuring the self-hosted runner..."
-sudo -u $USER "./config.sh --url https://github.com/$REPO_OWNER/$REPO_NAME --token $GITHUB_PAT  --labels  self-hosted,oracle-vm-runner"
+echo "Configuring the self-hosted runner with user ${USER}..."
+sudo -u $USER "./config.sh --url https://github.com/$REPO_OWNER/$REPO_NAME --token $GITHUB_PAT"
 
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
