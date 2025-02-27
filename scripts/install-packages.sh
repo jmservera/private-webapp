@@ -2,7 +2,7 @@
 set -e
 
 ORIGINAL_USR=$(whoami)
-echo "Installing required packages with user ${ORIGINAL_USR}."
+echo "Installing required packages."
 
 # Update package lists
 apt-get update
@@ -28,7 +28,7 @@ systemctl start docker
 
 
 # Print completion message
-echo "Package installation completed successfully!"
+echo "Package installation completed successfully for user ${ORIGINAL_USR}!"
 
 # Create a folder
 mkdir actions-runner && cd actions-runner
@@ -40,7 +40,7 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 echo "Runner package extracted successfully!"
 
 echo "Configuring the self-hosted runner with user ${USER}..."
-sudo -u $USER "./config.sh --url https://github.com/$REPO_OWNER/$REPO_NAME --token $GITHUB_PAT"
+sudo -u $USER bash -c "config.sh --url \"https://github.com/$REPO_OWNER/$REPO_NAME\" --token \"$GITHUB_PAT\""
 
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
