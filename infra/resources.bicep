@@ -7,12 +7,15 @@ param tags object = {}
 @description('Id of the user or app to assign application roles')
 param principalId string
 param ghRunnerDefinition object
+param production bool = false
 
 @secure()
 param publicKey string
 
 param repo_name string
 param repo_owner string
+@secure()
+param githubPat string
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -97,52 +100,54 @@ module ghRunnerAppIdentity 'br/public:avm/res/managed-identity/user-assigned-ide
     location: location
   }
 }
-// Container registry
-module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' = {
-  name: 'registry'
-  params: {
-    name: '${abbrs.containerRegistryRegistries}${resourceToken}'
-    location: location
-    acrAdminUserEnabled: true
-    tags: tags
-    publicNetworkAccess: 'Enabled'
-    roleAssignments: [
-      {
-        principalId: ghRunnerAppIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: subscriptionResourceId(
-          'Microsoft.Authorization/roleDefinitions',
-          '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-        )
-      }
-    ]
-  }
-}
+// // Container registry
+// module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' = {
+//   name: 'registry'
+//   params: {
+//     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
+//     location: location
+//     acrAdminUserEnabled: true
+//     tags: tags
+//     publicNetworkAccess: 'Enabled'
+//     roleAssignments: [
+//       {
+//         principalId: ghRunnerAppIdentity.outputs.principalId
+//         principalType: 'ServicePrincipal'
+//         roleDefinitionIdOrName: subscriptionResourceId(
+//           'Microsoft.Authorization/roleDefinitions',
+//           '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+//         )
+//       }
+//     ]
+//   }
+// }
 
-module keyVault 'br/public:avm/res/key-vault/vault:0.6.1' = {
-  name: 'keyvault'
-  params: {
-    name: '${abbrs.keyVaultVaults}${resourceToken}'
-    location: location
-    tags: tags
-    enableRbacAuthorization: false
-    accessPolicies: [
-      {
-        objectId: principalId
-        permissions: {
-          secrets: ['get', 'list']
-        }
-      }
-      {
-        objectId: ghRunnerAppIdentity.outputs.principalId
-        permissions: {
-          secrets: ['get', 'list']
-        }
-      }
-    ]
-    secrets: []
-  }
-}
+// module keyVault 'br/public:avm/res/key-vault/vault:0.6.1' = {
+//   name: 'keyvault'
+//   params: {
+//     name: '${abbrs.keyVaultVaults}${resourceToken}'
+//     location: location
+//     tags: tags
+//     enableRbacAuthorization: false
+//     enablePurgeProtection: production
+//     enableSoftDelete: production
+//     accessPolicies: [
+//       {
+//         objectId: principalId
+//         permissions: {
+//           secrets: ['get', 'list', 'set']
+//         }
+//       }
+//       {
+//         objectId: ghRunnerAppIdentity.outputs.principalId
+//         permissions: {
+//           secrets: ['get', 'list']
+//         }
+//       }
+//     ]
+//     secrets: []
+//   }
+// }
 
 module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
   name: 'monitoring'
@@ -212,8 +217,19 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
         path: '/home/localAdminUser/.ssh/authorized_keys'
       }
     ]
+    extensionCustomScriptConfig: {
+      enabled: true
+      settings: {
+        commandToExecute: 'REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPat} bash install-packages.sh'
+      }
+      fileData: [
+        {
+          uri: 'https://raw.githubusercontent.com/jmservera/private-webapp/refs/heads/main/scripts/install-packages.sh'
+        }
+      ]
+    }
     extensionCustomScriptProtectedSetting: {
-      commandToExecute: loadTextContent('../scripts/install-packages.sh')
+      commandToExecute: 'bash install-packages.sh'
     }
   }
 }
@@ -224,6 +240,6 @@ output frontendId string = frontEndApp.outputs.id
 output backendId string = backEndApp.outputs.id
 output sqlServerId string = sqlDb.outputs.serverId
 
-output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
-output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
+// output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
+// output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_RESOURCE_GHRUNNER_ID string = ghRunner.outputs.resourceId
