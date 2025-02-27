@@ -34,7 +34,15 @@ curl -O -L https://github.com/actions/runner/releases/download/v2.320.1/actions-
 # Extract the installer
 tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
+echo "Runner package extracted successfully!"
+
+echo "Configuring the self-hosted runner..."
 ./config.sh --url https://github.com/$REPO_OWNER/$REPO_NAME --token $GITHUB_PAT  --labels  self-hosted,oracle-vm-runner
 
+echo "Runner configured successfully!"
+echo "Installing the self-hosted runner as a service..."
 ./svc.sh install
+echo "Runner installed successfully!"
+echo "Starting the self-hosted runner service..."
 ./svc.sh start
+echo "Runner service started successfully!"

@@ -219,9 +219,6 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
     ]
     extensionCustomScriptConfig: {
       enabled: true
-      settings: {
-        commandToExecute: 'REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPat} bash install-packages.sh'
-      }
       fileData: [
         {
           uri: 'https://raw.githubusercontent.com/jmservera/private-webapp/refs/heads/main/scripts/install-packages.sh'
@@ -229,7 +226,7 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
       ]
     }
     extensionCustomScriptProtectedSetting: {
-      commandToExecute: 'bash install-packages.sh'
+      commandToExecute: 'REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPat} bash install-packages.sh'
     }
   }
 }

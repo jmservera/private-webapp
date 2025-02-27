@@ -52,6 +52,7 @@ module resources './resources.bicep' = {
     repo_name: repo_name
     repo_owner: repo_owner
     publicKey: publicKey
+    githubPat: githubPat
   }
 }
 
