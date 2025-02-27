@@ -37,7 +37,7 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 echo "Runner package extracted successfully!"
 
 echo "Configuring the self-hosted runner..."
-./config.sh --url https://github.com/$REPO_OWNER/$REPO_NAME --token $GITHUB_PAT  --labels  self-hosted,oracle-vm-runner
+sudo -u $USER "./config.sh --url https://github.com/$REPO_OWNER/$REPO_NAME --token $GITHUB_PAT  --labels  self-hosted,oracle-vm-runner"
 
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
