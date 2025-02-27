@@ -1,4 +1,3 @@
-param ghRunnerExists bool
 param location string = resourceGroup().location
 param namePrefix string = 'appDemo'
 param sqlAdminLogin string = 'sqladmin'
@@ -8,6 +7,12 @@ param tags object = {}
 @description('Id of the user or app to assign application roles')
 param principalId string
 param ghRunnerDefinition object
+
+@secure()
+param publicKey string
+
+param repo_name string
+param repo_owner string
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -139,16 +144,6 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.6.1' = {
   }
 }
 
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.4.5' = {
-  name: 'container-apps-environment'
-  params: {
-    logAnalyticsWorkspaceResourceId: monitoring.outputs.logAnalyticsWorkspaceResourceId
-    name: '${abbrs.appManagedEnvironments}${resourceToken}'
-    location: location
-    zoneRedundant: false
-  }
-}
-
 module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
   name: 'monitoring'
   params: {
@@ -157,14 +152,6 @@ module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
     applicationInsightsDashboardName: '${abbrs.portalDashboards}${resourceToken}'
     location: location
     tags: tags
-  }
-}
-
-module ghRunnerFetchLatestImage './modules/fetch-container-image.bicep' = {
-  name: 'ghrunner-fetch-image'
-  params: {
-    exists: ghRunnerExists
-    name: 'ghrunner'
   }
 }
 
@@ -179,78 +166,57 @@ var ghRunnerEnv = map(filter(ghRunnerAppSettingsArray, i => i.?secret == null), 
   value: i.value
 })
 
-module ghRunner 'br/public:avm/res/app/container-app:0.8.0' = {
-  name: 'ghrunner'
+module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
+  name: 'virtualMachineDeployment'
   params: {
-    name: 'ghrunner'
-    ingressTargetPort: 5001
-    scaleMinReplicas: 1
-    scaleMaxReplicas: 10
-    secrets: {
-      secureList: union(
-        [],
-        map(ghRunnerSecrets, secret => {
-          name: secret.secretRef
-          value: secret.value
-        })
-      )
+    // Required parameters
+    adminUsername: 'localAdminUser'
+    imageReference: {
+      offer: '0001-com-ubuntu-server-jammy'
+      publisher: 'Canonical'
+      sku: '22_04-lts-gen2'
+      version: 'latest'
     }
-    containers: [
+    name: 'ghRunner'
+    encryptionAtHost: false
+    nicConfigurations: [
       {
-        image: ghRunnerFetchLatestImage.outputs.?containers[?0].?image ?? 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-        name: 'main'
-        resources: {
-          cpu: json('0.5')
-          memory: '1.0Gi'
-        }
-        env: union(
-          [
-            {
-              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-              value: monitoring.outputs.applicationInsightsConnectionString
+        ipConfigurations: [
+          {
+            name: 'ipconfig01'
+            pipConfiguration: {
+              name: 'pip-01'
             }
-            {
-              name: 'AZURE_CLIENT_ID'
-              value: ghRunnerAppIdentity.outputs.clientId
-            }
-            {
-              name: 'PORT'
-              value: '5001'
-            }
-          ],
-          ghRunnerEnv,
-          map(ghRunnerSecrets, secret => {
-            name: secret.name
-            secretRef: secret.secretRef
-          })
-        )
+            subnetResourceId: vnet.outputs.appSubnetId
+          }
+        ]
+        nicSuffix: '-nic-01'
       }
     ]
-    managedIdentities: {
-      systemAssigned: false
-      userAssignedResourceIds: [ghRunnerAppIdentity.outputs.resourceId]
-    }
-    registries: [
-      {
-        server: containerRegistry.outputs.loginServer
-        identity: ghRunnerAppIdentity.outputs.resourceId
+    osDisk: {
+      caching: 'ReadWrite'
+      diskSizeGB: 128
+      managedDisk: {
+        storageAccountType: 'Premium_LRS'
       }
-    ]
-    environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    }
+    osType: 'Linux'
+    vmSize: 'Standard_D2s_v3'
+    zone: 0
+    // Non-required parameters
+    disablePasswordAuthentication: true
     location: location
-    tags: union(tags, { 'azd-service-name': 'ghRunner' })
+    publicKeys: [
+      {
+        keyData: publicKey
+        path: '/home/localAdminUser/.ssh/authorized_keys'
+      }
+    ]
+    extensionCustomScriptProtectedSetting: {
+      commandToExecute: loadTextContent('../scripts/install-packages.sh')
+    }
   }
 }
-
-//https://learn.microsoft.com/en-us/azure/container-apps/tutorial-ci-cd-runners-jobs?tabs=bash&pivots=container-apps-jobs-self-hosted-ci-cd-github-actions
-
-// module containerApp 'modules/containerApp.bicep' = {name: 'containerApp'
-//   params: {
-//     name: '${namePrefix}-container'
-//     location: location
-//     containerImage:
-//   }
-// }
 
 // Output important values
 output frontendUrl string = frontEndApp.outputs.url
@@ -258,7 +224,6 @@ output frontendId string = frontEndApp.outputs.id
 output backendId string = backEndApp.outputs.id
 output sqlServerId string = sqlDb.outputs.serverId
 
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
 output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_RESOURCE_GHRUNNER_ID string = ghRunner.outputs.resourceId

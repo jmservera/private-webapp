@@ -8,8 +8,17 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
-    "ghRunnerExists": {
-      "value": "${SERVICE_GH_RUNNER_EXISTS=false}"
+    "repo_owner": {
+      "value": "${REPO_OWNER}"
+    },
+    "repo_name": {
+      "value": "${REPO_NAME}"
+    },
+    "githubPat": {
+      "value": "${GITHUB_PAT}"
+    },
+    "publicKey": {
+      "value": "${PUBLIC_KEY}"
     },
     "ghRunnerDefinition": {
       "value": {

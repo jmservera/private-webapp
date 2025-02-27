@@ -5,8 +5,10 @@ targetScope = 'subscription'
 @description('Name of the environment that can be used as part of naming resource convention')
 param environmentName string
 
-param ghRunnerExists bool
+param publicKey string
 param ghRunnerDefinition object
+param repo_owner string
+param repo_name string
 
 @minLength(1)
 @description('Primary location for all resources')
@@ -40,15 +42,16 @@ module resources './resources.bicep' = {
     namePrefix: environmentName
     sqlAdminLogin: sqlAdminLogin
     sqlAdminPassword: sqlAdminPassword
-    ghRunnerExists: ghRunnerExists
     tags: tags
     location: location
     principalId: principalId
     ghRunnerDefinition: ghRunnerDefinition
+    repo_name: repo_name
+    repo_owner: repo_owner
+    publicKey: publicKey
   }
 }
 
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
 output AZURE_KEY_VAULT_ENDPOINT string = resources.outputs.AZURE_KEY_VAULT_ENDPOINT
 output AZURE_KEY_VAULT_NAME string = resources.outputs.AZURE_KEY_VAULT_NAME
 output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
