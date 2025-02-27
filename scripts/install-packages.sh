@@ -40,7 +40,8 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 echo "Runner package extracted successfully!"
 
 echo "Configuring the self-hosted runner with user ${USER}..."
-sudo -u $USER bash -c "config.sh --url \"https://github.com/$REPO_OWNER/$REPO_NAME\" --token \"$GITHUB_PAT\""
+
+sudo -u $USER bash -c "./config.sh --url \"https://github.com/$REPO_OWNER/$REPO_NAME\" --token \"$GITHUB_PAT\""
 
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
