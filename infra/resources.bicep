@@ -8,6 +8,8 @@ param tags object = {}
 param principalId string
 param ghRunnerDefinition object
 param production bool = false
+@secure()
+param adminPassword string = ''
 
 @secure()
 param publicKey string
@@ -171,11 +173,13 @@ var ghRunnerEnv = map(filter(ghRunnerAppSettingsArray, i => i.?secret == null), 
   value: i.value
 })
 
+var adminUserName = 'localAdminUser'
+
 module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
   name: 'virtualMachineDeployment'
   params: {
     // Required parameters
-    adminUsername: 'localAdminUser'
+    adminUsername: adminUserName
     imageReference: {
       offer: '0001-com-ubuntu-server-jammy'
       publisher: 'Canonical'
@@ -207,9 +211,11 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
     }
     osType: 'Linux'
     vmSize: 'Standard_D2s_v3'
+    bootDiagnostics: true
     zone: 0
     // Non-required parameters
-    disablePasswordAuthentication: true
+    disablePasswordAuthentication: empty(adminPassword) ? true : false
+    adminPassword: adminPassword
     location: location
     publicKeys: [
       {
@@ -226,7 +232,7 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
       ]
     }
     extensionCustomScriptProtectedSetting: {
-      commandToExecute: 'REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPat} bash install-packages.sh'
+      commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPat} bash install-packages.sh'
     }
   }
 }

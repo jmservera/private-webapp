@@ -19,6 +19,8 @@ param principalId string
 param sqlAdminLogin string = 'sqladmin'
 @secure()
 param sqlAdminPassword string
+@secure()
+param adminPassword string
 
 @secure()
 param githubPat string
@@ -53,6 +55,7 @@ module resources './resources.bicep' = {
     repo_owner: repo_owner
     publicKey: publicKey
     githubPat: githubPat
+    adminPassword: adminPassword
   }
 }
 
