@@ -6,7 +6,6 @@ targetScope = 'subscription'
 param environmentName string
 
 param publicKey string
-param ghRunnerDefinition object
 param repo_owner string
 param repo_name string
 
@@ -23,7 +22,9 @@ param sqlAdminPassword string
 param adminPassword string
 
 @secure()
-param githubPat string
+param githubToken string
+@secure()
+param githubPAT string
 
 // Tags that should be applied to all resources.
 // 
@@ -50,15 +51,16 @@ module resources './resources.bicep' = {
     tags: tags
     location: location
     principalId: principalId
-    ghRunnerDefinition: ghRunnerDefinition
     repo_name: repo_name
     repo_owner: repo_owner
     publicKey: publicKey
-    githubPat: githubPat
+    githubToken: githubToken
     adminPassword: adminPassword
+    githubPAT: githubPAT
   }
 }
 
 // output AZURE_KEY_VAULT_ENDPOINT string = resources.outputs.AZURE_KEY_VAULT_ENDPOINT
 // output AZURE_KEY_VAULT_NAME string = resources.outputs.AZURE_KEY_VAULT_NAME
 output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
+output RESOURCE_GROUP string = rg.name

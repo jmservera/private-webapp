@@ -19,9 +19,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       
-    - name: Azure Login with Managed Identity
-      run: |
-        az login --identity
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az login --identity
         
     - name: Get ACR Login Server
       run: |

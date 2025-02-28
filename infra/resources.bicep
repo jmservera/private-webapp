@@ -6,7 +6,6 @@ param sqlAdminPassword string
 param tags object = {}
 @description('Id of the user or app to assign application roles')
 param principalId string
-param ghRunnerDefinition object
 param production bool = false
 @secure()
 param adminPassword string = ''
@@ -17,7 +16,9 @@ param publicKey string
 param repo_name string
 param repo_owner string
 @secure()
-param githubPat string
+param githubToken string
+@secure()
+param githubPAT string
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -69,6 +70,61 @@ module sqlDb './modules/sqlDatabase.bicep' = {
   }
 }
 
+// Add permissions to SQL Server for principalId
+module sqlServerContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  name: 'sqlServerContributor'
+  params: {
+    principalId: principalId
+    principalType: 'User'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    ) // Contributor role
+    resourceId: sqlDb.outputs.serverId
+  }
+}
+
+// Add permissions to SQL Server for ghRunner identity
+module ghRunnerSqlContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  name: 'ghRunnerSqlContributor'
+  params: {
+    principalId: ghRunnerAppIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    ) // Contributor role
+    resourceId: sqlDb.outputs.serverId
+  }
+}
+
+// Add role assignments for Web Apps to access Container Registry
+module frontendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  name: 'frontendWebAppAcrPull'
+  params: {
+    principalId: frontEndApp.outputs.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    ) // AcrPull role
+    resourceId: containerRegistry.outputs.resourceId
+  }
+}
+
+module backendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  name: 'backendWebAppAcrPull'
+  params: {
+    principalId: backEndApp.outputs.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    ) // AcrPull role
+    resourceId: containerRegistry.outputs.resourceId
+  }
+}
+
 // Private endpoint for backend
 module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = {
   name: 'backEndPrivateEndpoint'
@@ -102,27 +158,28 @@ module ghRunnerAppIdentity 'br/public:avm/res/managed-identity/user-assigned-ide
     location: location
   }
 }
-// // Container registry
-// module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' = {
-//   name: 'registry'
-//   params: {
-//     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
-//     location: location
-//     acrAdminUserEnabled: true
-//     tags: tags
-//     publicNetworkAccess: 'Enabled'
-//     roleAssignments: [
-//       {
-//         principalId: ghRunnerAppIdentity.outputs.principalId
-//         principalType: 'ServicePrincipal'
-//         roleDefinitionIdOrName: subscriptionResourceId(
-//           'Microsoft.Authorization/roleDefinitions',
-//           '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-//         )
-//       }
-//     ]
-//   }
-// }
+
+// Container registry
+module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' = {
+  name: 'registry'
+  params: {
+    name: '${abbrs.containerRegistryRegistries}${resourceToken}'
+    location: location
+    acrAdminUserEnabled: true
+    tags: tags
+    publicNetworkAccess: 'Enabled'
+    roleAssignments: [
+      {
+        principalId: ghRunnerAppIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: subscriptionResourceId(
+          'Microsoft.Authorization/roleDefinitions',
+          '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+        )
+      }
+    ]
+  }
+}
 
 // module keyVault 'br/public:avm/res/key-vault/vault:0.6.1' = {
 //   name: 'keyvault'
@@ -162,17 +219,6 @@ module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
   }
 }
 
-var ghRunnerAppSettingsArray = filter(array(ghRunnerDefinition.settings), i => i.name != '')
-var ghRunnerSecrets = map(filter(ghRunnerAppSettingsArray, i => i.?secret != null), i => {
-  name: i.name
-  value: i.value
-  secretRef: i.?secretRef ?? take(replace(replace(toLower(i.name), '_', '-'), '.', '-'), 32)
-})
-var ghRunnerEnv = map(filter(ghRunnerAppSettingsArray, i => i.?secret == null), i => {
-  name: i.name
-  value: i.value
-})
-
 var adminUserName = 'localAdminUser'
 
 module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
@@ -187,15 +233,20 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
       version: 'latest'
     }
     name: 'ghRunner'
+    managedIdentities: {
+      userAssignedResourceIds: [
+        ghRunnerAppIdentity.outputs.resourceId
+      ]
+    }
     encryptionAtHost: false
     nicConfigurations: [
       {
         ipConfigurations: [
           {
             name: 'ipconfig01'
-            pipConfiguration: {
-              name: 'pip-01'
-            }
+            // pipConfiguration: { // we don't need a public IP for this machine, just a GH Action runner
+            //   name: 'pip-01'
+            // }
             subnetResourceId: vnet.outputs.appSubnetId
           }
         ]
@@ -232,7 +283,7 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
       ]
     }
     extensionCustomScriptProtectedSetting: {
-      commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPat} bash install-packages.sh'
+      commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPAT} GITHUB_REPO_TOKEN=${githubToken} bash install-packages.sh'
     }
   }
 }
@@ -246,3 +297,6 @@ output sqlServerId string = sqlDb.outputs.serverId
 // output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
 // output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_RESOURCE_GHRUNNER_ID string = ghRunner.outputs.resourceId
+output acrName string = containerRegistry.outputs.name
+output acrLoginServer string = containerRegistry.outputs.loginServer
+output resourceGroup string = resourceGroup().name
