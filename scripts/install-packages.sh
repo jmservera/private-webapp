@@ -42,7 +42,7 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 echo "Runner package extracted successfully!"
 
 echo "Configuring the self-hosted runner with user ${USER}..."
-./config.sh --url "https://github.com/$REPO_OWNER/$REPO_NAME" --token "$GITHUB_PAT"
+./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_PAT}" --labels  self-hosted --unattended
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
 sudo ./svc.sh install
