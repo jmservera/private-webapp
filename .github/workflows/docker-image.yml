@@ -15,6 +15,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - run: whoami
     - name: Build the Docker image
       working-directory: src/frontend
       run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
