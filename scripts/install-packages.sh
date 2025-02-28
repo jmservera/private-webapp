@@ -24,7 +24,7 @@ apt-get install -y \
 # Enable and start Docker
 systemctl enable docker
 systemctl start docker
-
+gpasswd -a $USER docker
 
 # Print completion message
 echo "Package installation completed successfully!"
