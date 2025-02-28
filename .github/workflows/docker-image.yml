@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build and Deploy Container Images
 
 on:
   workflow_dispatch:
@@ -8,14 +8,58 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  build-and-deploy:
     runs-on: self-hosted
+    env:
+      RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+      FRONTEND_APP_NAME: ${{ vars.FRONTEND_APP_NAME }}
+      BACKEND_APP_NAME: ${{ vars.BACKEND_APP_NAME }}
+      ACR_NAME: ${{ vars.ACR_NAME }}
 
     steps:
     - uses: actions/checkout@v4
-    - run: whoami
-    - name: Build the Docker image
+      
+    - name: Azure Login with Managed Identity
+      run: |
+        az login --identity
+        
+    - name: Get ACR Login Server
+      run: |
+        echo "ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer -o tsv)" >> $GITHUB_ENV
+        
+    - name: Build and Push Frontend Docker image
       working-directory: src/frontend
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      run: |
+        # Build the image
+        docker build . -t ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
+        
+        # Push to ACR using the az commands
+        az acr login --name $ACR_NAME
+        docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }}
+        docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
+        
+    - name: Build and Push Backend Docker image
+      working-directory: src/backend
+      run: |
+        # Build the image
+        docker build . -t ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/backend:latest
+        
+        # Push to ACR using the az commands
+        az acr login --name $ACR_NAME
+        docker push ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }}
+        docker push ${{ env.ACR_LOGIN_SERVER }}/backend:latest
+        
+    - name: Deploy Frontend to Web App
+      run: |
+        az webapp config container set --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP \
+          --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} \
+          --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }}
+        az webapp restart --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP
+        
+    - name: Deploy Backend to Web App
+      run: |
+        az webapp config container set --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP \
+          --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} \
+          --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }}
+        az webapp restart --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP
+

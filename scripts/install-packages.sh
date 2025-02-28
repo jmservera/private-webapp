@@ -4,7 +4,7 @@ set -e
 echo "Installing required packages."
 
 # Update package lists
-apt-get update
+apt-get update && apt-get upgrade -y
 
 # Install required packages
 apt-get install -y \
@@ -13,7 +13,6 @@ apt-get install -y \
   curl \
   gnupg \
   lsb-release \
-  docker.io \
   jq \
   git \
   unzip \
@@ -21,9 +20,22 @@ apt-get install -y \
   npm \
   libicu70 \
   libssl3
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt-get update
+
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
 # Enable and start Docker
-systemctl enable docker
-systemctl start docker
+# systemctl enable docker
+# systemctl start docker
 gpasswd -a $USER docker
 
 # Print completion message
@@ -42,8 +54,14 @@ tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
 echo "Runner package extracted successfully!"
 
+#
+#    Review how to get the runner PAT from the GitHub pat using the reg token
+#    //         "name": "REGISTRATION_TOKEN_API_URL",
+#    //         "value": "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
+#
+
 echo "Configuring the self-hosted runner with user ${USER}..."
-./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_PAT}" --labels  self-hosted --unattended
+./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_REPO_TOKEN}" --labels  self-hosted --unattended
 echo "Runner configured successfully!"
 echo "Installing the self-hosted runner as a service..."
 sudo ./svc.sh install
