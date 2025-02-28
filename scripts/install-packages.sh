@@ -31,6 +31,7 @@ echo "Package installation completed successfully!"
 RUNAS="sudo -iu $USER"
 
 $RUNAS bash<<_
+set -e
 echo "Installing the self-hosted runner..."
 # Create a folder
 mkdir actions-runner && cd actions-runner
