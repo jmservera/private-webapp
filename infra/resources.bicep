@@ -76,13 +76,34 @@ module sqlServerContributor 'br/public:avm/ptn/authorization/resource-role-assig
   params: {
     principalId: principalId
     principalType: 'User'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'b24988ac-6180-42a0-ab88-20f7382dd24c'
-    ) // Contributor role
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
     resourceId: sqlDb.outputs.serverId
   }
 }
+
+resource ghReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: resourceGroup()
+  name: guid(resourceGroup().id, 'ghRunnerRGReader')
+  properties: {
+    // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
+    principalId: ghRunnerAppIdentity.outputs.principalId
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7') // Reader role
+  }
+}
+
+// module roleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+//   name: 'ghRunnerRGReader'
+//   params: {
+//     roleName: 'Reader'
+//     // Required parameters
+//     principalId: ghRunnerAppIdentity.outputs.principalId
+//     roleDefinitionId: subscriptionResourceId(
+//       'Microsoft.Authorization/roleDefinitions',
+//       'acdd72a7-3385-48ef-bd42-f606fba81ae7'
+//     ) // Reader role
+//     resourceId: resourceGroup().id
+//   }
+// }
 
 // Add permissions to SQL Server for ghRunner identity
 module ghRunnerSqlContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
@@ -90,11 +111,19 @@ module ghRunnerSqlContributor 'br/public:avm/ptn/authorization/resource-role-ass
   params: {
     principalId: ghRunnerAppIdentity.outputs.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'b24988ac-6180-42a0-ab88-20f7382dd24c'
-    ) // Contributor role
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
     resourceId: sqlDb.outputs.serverId
+  }
+}
+
+// add contributor role to the resource group for the ghRunner identity
+module ghRunnerResourceGroupContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  name: 'ghRunnerResourceGroupContributor'
+  params: {
+    principalId: ghRunnerAppIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
+    resourceId: resourceGroup().id
   }
 }
 
@@ -104,10 +133,7 @@ module frontendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assi
   params: {
     principalId: frontEndApp.outputs.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-    ) // AcrPull role
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
     resourceId: containerRegistry.outputs.resourceId
   }
 }
@@ -117,10 +143,7 @@ module backendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assig
   params: {
     principalId: backEndApp.outputs.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-    ) // AcrPull role
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
     resourceId: containerRegistry.outputs.resourceId
   }
 }
@@ -172,7 +195,7 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
       {
         principalId: ghRunnerAppIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: subscriptionResourceId(
+        roleDefinitionIdOrName: resourceId(
           'Microsoft.Authorization/roleDefinitions',
           '7f951dda-4ed3-4680-a7ca-43fe172d538d'
         )

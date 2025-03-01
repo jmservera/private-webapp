@@ -33,9 +33,10 @@ apt-get update
 
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Enable and start Docker
-# systemctl enable docker
-# systemctl start docker
+# Install Azure CLI
+curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Add user to docker group
 gpasswd -a $USER docker
 
 # Print completion message
