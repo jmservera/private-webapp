@@ -1,5 +1,13 @@
 #!/bin/bash
-
+echo "Loading azd .env file from current environment"
+# Use the `get-values` azd command to retrieve environment variables from the `.env` file
+while IFS='=' read -r key value; do
+    # Remove surrounding quotes and ignore trailing spaces (last value in .env seems to have one and made the whole script fail)
+    value=$(echo "${value}" | sed 's/^"\(.*\)"[[:space:]]*$/\1/') 
+    export "$key=${value}"
+done <<EOF
+$(azd env get-values) 
+EOF
 # This script sets up GitHub repository variables needed for the workflow
 
 # Check if required environment variables are set

@@ -9,6 +9,7 @@ param principalId string
 param production bool = false
 @secure()
 param adminPassword string = ''
+param adminUserName string = 'localAdminUser'
 
 @secure()
 param publicKey string
@@ -42,6 +43,7 @@ module frontEndApp './modules/webApp.bicep' = {
     skuName: 'S1'
     skuTier: 'Standard'
     publicNetworkAccess: 'Enabled'
+    virtualNetworkSubnetId: vnet.outputs.appSubnetId
   }
 }
 
@@ -55,6 +57,7 @@ module backEndApp './modules/webApp.bicep' = {
     skuName: 'S1'
     skuTier: 'Standard'
     publicNetworkAccess: 'Disabled'
+    virtualNetworkSubnetId: vnet.outputs.appSubnetId
   }
 }
 
@@ -96,6 +99,7 @@ resource ghRunnerResourceGroupContributor 'Microsoft.Authorization/roleAssignmen
   scope: resourceGroup()
   name: guid(resourceGroup().id, 'ghRunnerResourceGroupContributor')
   properties: {
+    // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
     principalId: ghRunnerAppIdentity.outputs.principalId
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
   }
@@ -129,7 +133,7 @@ module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = {
     name: '${namePrefix}-backend'
     location: location
     vnetId: vnet.outputs.vnetId
-    subnetId: vnet.outputs.appSubnetId
+    subnetId: vnet.outputs.privateSubnetId
     privateLinkServiceId: backEndApp.outputs.id
     targetSubResource: 'sites'
   }
@@ -178,33 +182,6 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
   }
 }
 
-// module keyVault 'br/public:avm/res/key-vault/vault:0.6.1' = {
-//   name: 'keyvault'
-//   params: {
-//     name: '${abbrs.keyVaultVaults}${resourceToken}'
-//     location: location
-//     tags: tags
-//     enableRbacAuthorization: false
-//     enablePurgeProtection: production
-//     enableSoftDelete: production
-//     accessPolicies: [
-//       {
-//         objectId: principalId
-//         permissions: {
-//           secrets: ['get', 'list', 'set']
-//         }
-//       }
-//       {
-//         objectId: ghRunnerAppIdentity.outputs.principalId
-//         permissions: {
-//           secrets: ['get', 'list']
-//         }
-//       }
-//     ]
-//     secrets: []
-//   }
-// }
-
 module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
   name: 'monitoring'
   params: {
@@ -215,8 +192,6 @@ module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
     tags: tags
   }
 }
-
-var adminUserName = 'localAdminUser'
 
 module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
   name: 'virtualMachineDeployment'
@@ -241,10 +216,7 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
         ipConfigurations: [
           {
             name: 'ipconfig01'
-            // pipConfiguration: { // we don't need a public IP for this machine, just a GH Action runner
-            //   name: 'pip-01'
-            // }
-            subnetResourceId: vnet.outputs.appSubnetId
+            subnetResourceId: vnet.outputs.vmSubnetId
           }
         ]
         nicSuffix: '-nic-01'

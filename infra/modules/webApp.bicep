@@ -4,6 +4,7 @@ param planName string
 param skuName string = 'S1'
 param skuTier string = 'Standard'
 param publicNetworkAccess string = 'Enabled'
+param virtualNetworkSubnetId string = ''
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: planName
@@ -31,6 +32,7 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
     }
+    virtualNetworkSubnetId: virtualNetworkSubnetId
   }
   identity: {
     type: 'SystemAssigned'
