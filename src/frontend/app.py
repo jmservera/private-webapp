@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template_string
 import requests
 import os
+import re
 
 backend = os.getenv("BACKEND", "http://localhost:8080")
 
@@ -96,11 +97,28 @@ def set_value():
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
-    value = requests.get(backend + '/get/' + key)
-    if value.status_code == 200:
-        return value.json(), 200
-    else:
-        return jsonify({"message": "Key not found"}), 404
+    
+    # Input validation - only allow alphanumeric characters and some safe symbols
+    if not re.match(r'^[a-zA-Z0-9_-]+$', key):
+        return jsonify({"message": "Invalid key format"}), 400
+        
+    try:
+        # Use proper URL formatting instead of string concatenation
+        response = requests.get(f"{backend}/get/{key}", timeout=5)
+        
+        if response.status_code == 200:
+            return response.json(), 200
+        elif response.status_code == 404:
+            return jsonify({"message": "Key not found"}), 404
+        else:
+            # Log the actual error but don't expose details to client
+            print(f"Backend error: {response.text}")
+            return jsonify({"message": "Internal server error"}), 500
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {str(e)}")
+        return jsonify({"message": "Error communicating with backend"}), 500
+    
 @app.route('/health', methods=['GET'])
 def health():
     # send a rest get request to the backend
