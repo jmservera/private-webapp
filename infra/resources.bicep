@@ -81,30 +81,6 @@ module sqlServerContributor 'br/public:avm/ptn/authorization/resource-role-assig
   }
 }
 
-resource ghReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: resourceGroup()
-  name: guid(resourceGroup().id, 'ghRunnerRGReader')
-  properties: {
-    // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
-    principalId: ghRunnerAppIdentity.outputs.principalId
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7') // Reader role
-  }
-}
-
-// module roleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
-//   name: 'ghRunnerRGReader'
-//   params: {
-//     roleName: 'Reader'
-//     // Required parameters
-//     principalId: ghRunnerAppIdentity.outputs.principalId
-//     roleDefinitionId: subscriptionResourceId(
-//       'Microsoft.Authorization/roleDefinitions',
-//       'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-//     ) // Reader role
-//     resourceId: resourceGroup().id
-//   }
-// }
-
 // Add permissions to SQL Server for ghRunner identity
 module ghRunnerSqlContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
   name: 'ghRunnerSqlContributor'
@@ -116,14 +92,12 @@ module ghRunnerSqlContributor 'br/public:avm/ptn/authorization/resource-role-ass
   }
 }
 
-// add contributor role to the resource group for the ghRunner identity
-module ghRunnerResourceGroupContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
-  name: 'ghRunnerResourceGroupContributor'
-  params: {
+resource ghRunnerResourceGroupContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: resourceGroup()
+  name: guid(resourceGroup().id, 'ghRunnerResourceGroupContributor')
+  properties: {
     principalId: ghRunnerAppIdentity.outputs.principalId
-    principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
-    resourceId: resourceGroup().id
   }
 }
 

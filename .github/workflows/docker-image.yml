@@ -23,21 +23,21 @@ jobs:
       run: whoami
       
     - name: Azure CLI script
-      uses: azure/cli@v2
+      uses: azure/cli@v2.0.52
       with:
         azcliversion: latest
         inlineScript: |
           az login --identity          
 
     - name: Azure CLI script
-      uses: azure/cli@v2
+      uses: azure/cli@v2.0.52
       with:
         azcliversion: latest
         inlineScript: |
            echo "ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer -o tsv)" >> $GITHUB_ENV
        
     - name: Build and Push Frontend Docker image
-      uses: azure/cli@v2
+      uses: azure/cli@v2.0.52
       with:
         azcliversion: latest
         inlineScript: |
@@ -51,7 +51,7 @@ jobs:
             docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
         
     - name: Build and Push Backend Docker image
-      uses: azure/cli@v2
+      uses: azure/cli@v2.0.52
       with:
         azcliversion: latest
         inlineScript: |
@@ -65,7 +65,7 @@ jobs:
             docker push ${{ env.ACR_LOGIN_SERVER }}/backend:latest
         
     - name: Deploy Frontend Docker image
-      uses: azure/cli@v2
+      uses: azure/cli@v2.0.52
       with:
         azcliversion: latest
         inlineScript: |
@@ -75,7 +75,7 @@ jobs:
           az webapp restart --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP
         
     - name: Deploy Backend to Web App
-      uses: azure/cli@v2
+      uses: azure/cli@v2.0.52
       with:
         azcliversion: latest
         inlineScript: |
