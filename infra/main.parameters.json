@@ -23,8 +23,14 @@
     "publicKey": {
       "value": "${PUBLIC_KEY}"
     },
-    "principalId": {
-      "value": "${AZURE_PRINCIPAL_ID}"
+    "clientIpAddress": {
+      "value": "${CLIENT_IP_ADDRESS}"
+    },
+    "userSID": {
+      "value": "${USER_SID}"
+    },
+    "aadUserName": {
+      "value": "${USER_NAME}"
     }
   }
 }

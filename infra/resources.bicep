@@ -5,7 +5,8 @@ param sqlAdminLogin string = 'sqladmin'
 param sqlAdminPassword string
 param tags object = {}
 @description('Id of the user or app to assign application roles')
-param principalId string
+param userSID string
+param aadUserName string
 @description('GH Runner VM admin password if needed, you may leave it empty if using key authentication')
 @secure()
 param adminPassword string = ''
@@ -22,6 +23,8 @@ param repo_owner string
 param githubToken string
 @secure()
 param githubPAT string
+@description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
+param clientIpAddress string
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -97,18 +100,11 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     managedIdentityId: backendAppIdentity.outputs.principalId
     scriptSubnetId: vnet.outputs.vmSubnetId
     sqlAdminIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
+    sqlAdminIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
     vnetId: vnet.outputs.vnetId
-  }
-}
-
-// Add permissions to SQL Server for principalId
-module sqlServerContributor 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
-  name: 'sqlServerContributor'
-  params: {
-    principalId: principalId
-    principalType: 'User'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
-    resourceId: sqlDb.outputs.serverId
+    clientIpAddress: clientIpAddress
+    userSID: userSID
+    aadUserName: aadUserName
   }
 }
 

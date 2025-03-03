@@ -5,6 +5,12 @@ targetScope = 'subscription'
 @description('Name of the environment that can be used as part of naming resource convention')
 param environmentName string
 
+@description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
+param clientIpAddress string
+@description('Id of the user or app to assign application roles')
+param userSID string
+param aadUserName string
+
 param publicKey string
 param repo_owner string
 param repo_name string
@@ -12,8 +18,6 @@ param repo_name string
 @minLength(1)
 @description('Primary location for all resources')
 param location string
-@description('Id of the user or app to assign application roles')
-param principalId string
 
 param sqlAdminLogin string = 'sqladmin'
 @secure()
@@ -50,13 +54,15 @@ module resources './resources.bicep' = {
     sqlAdminPassword: sqlAdminPassword
     tags: tags
     location: location
-    principalId: principalId
     repo_name: repo_name
     repo_owner: repo_owner
     publicKey: publicKey
     githubToken: githubToken
     adminPassword: adminPassword
     githubPAT: githubPAT
+    clientIpAddress: clientIpAddress
+    userSID: userSID
+    aadUserName: aadUserName
   }
 }
 
