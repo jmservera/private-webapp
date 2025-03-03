@@ -6,11 +6,13 @@ param sqlAdminPassword string
 param tags object = {}
 @description('Id of the user or app to assign application roles')
 param principalId string
-param production bool = false
+@description('GH Runner VM admin password if needed, you may leave it empty if using key authentication')
 @secure()
 param adminPassword string = ''
+@description('GH Runner VM administrator name')
 param adminUserName string = 'localAdminUser'
 
+@description('Public Key for GH Runner VM authentication')
 @secure()
 param publicKey string
 
@@ -47,6 +49,14 @@ module frontEndApp './modules/webApp.bicep' = {
   }
 }
 
+module backendAppIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.2.1' = {
+  name: 'backendAppIdentity'
+  params: {
+    name: '${abbrs.managedIdentityUserAssignedIdentities}backend-${resourceToken}'
+    location: location
+  }
+}
+
 // Backend web app with private access
 module backEndApp './modules/webApp.bicep' = {
   name: 'backEndApp'
@@ -58,6 +68,20 @@ module backEndApp './modules/webApp.bicep' = {
     skuTier: 'Standard'
     publicNetworkAccess: 'Disabled'
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
+    appSettings: [
+      {
+        name: 'TableName'
+        value: 'Values'
+      }
+    ]
+    identityId: backendAppIdentity.outputs.resourceId
+    connectionStrings: [
+      {
+        name: 'ConnectionString'
+        type: 'SQLAzure'
+        value: 'Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Authentication=Active Directory Managed Identity;Encrypt=true;Connection Timeout=30;'
+      }
+    ]
   }
 }
 
@@ -70,6 +94,10 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     location: location
     adminLogin: sqlAdminLogin
     adminPassword: sqlAdminPassword
+    managedIdentityId: backendAppIdentity.outputs.principalId
+    scriptSubnetId: vnet.outputs.vmSubnetId
+    sqlAdminIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
+    vnetId: vnet.outputs.vnetId
   }
 }
 
@@ -102,6 +130,16 @@ resource ghRunnerResourceGroupContributor 'Microsoft.Authorization/roleAssignmen
     // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
     principalId: ghRunnerAppIdentity.outputs.principalId
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
+  }
+}
+
+resource ghRunnerWebSiteContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: resourceGroup()
+  name: guid(resourceGroup().id, 'ghRunnerWebSiteContributor')
+  properties: {
+    // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
+    principalId: ghRunnerAppIdentity.outputs.principalId
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'de139f84-1756-47ae-9be6-808fbbe84772') // WebSite Contributor role
   }
 }
 

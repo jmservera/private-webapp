@@ -5,6 +5,9 @@ param skuName string = 'S1'
 param skuTier string = 'Standard'
 param publicNetworkAccess string = 'Enabled'
 param virtualNetworkSubnetId string = ''
+param appSettings array = []
+param connectionStrings array = []
+param identityId string = ''
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: planName
@@ -31,12 +34,21 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
       http20Enabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      appSettings: appSettings
+      connectionStrings: connectionStrings
     }
     virtualNetworkSubnetId: virtualNetworkSubnetId
   }
-  identity: {
-    type: 'SystemAssigned'
-  }
+  identity: (identityId == '')
+    ? {
+        type: 'SystemAssigned'
+      }
+    : {
+        type: 'UserAssigned'
+        userAssignedIdentities: {
+          '${identityId}': {}
+        }
+      }
 }
 
 output id string = site.id
