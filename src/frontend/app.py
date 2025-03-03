@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, escape
 import requests
 import os
 import re
@@ -108,7 +108,7 @@ def get_value(key):
         
         if response.status_code == 200:
             data = response.json()
-            sanitized_data = {k: re.escape(v) if isinstance(v, str) else v for k, v in data.items()}
+            sanitized_data = {k: escape(v) if isinstance(v, str) else v for k, v in data.items()}
             return sanitized_data, 200
         elif response.status_code == 404:
             return jsonify({"message": "Key not found"}), 404
