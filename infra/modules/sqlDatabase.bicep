@@ -5,18 +5,17 @@ param adminLogin string
 @secure()
 param adminPassword string
 
-param managedIdentityId string
-
-param sqlAdminIdentityResourceId string
-param sqlAdminIdentityPrincipalId string
-param deploymentIdentityId string
+param deploymentIdentityClientId string
+param deploymentIdentityResourceId string
 param deploymentIdentityPrincipalId string
-param scriptSubnetId string
+param deploymentIdentityName string
+
+param appIdentityName string
+
+param scriptRunnerSubnetId string
 param storageSubnetId string
 param vnetId string
 param clientIpAddress string
-param userSID string
-param aadUserName string
 
 resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   name: serverName
@@ -24,13 +23,12 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   properties: {
     administratorLogin: adminLogin
     administratorLoginPassword: adminPassword
-    primaryUserAssignedIdentityId: sqlAdminIdentityResourceId
     administrators: {
       administratorType: 'ActiveDirectory'
-      login: aadUserName
+      login: deploymentIdentityName
       azureADOnlyAuthentication: false
-      principalType: 'User'
-      sid: userSID
+      principalType: 'Application'
+      sid: deploymentIdentityPrincipalId
       tenantId: subscription().tenantId
     }
     publicNetworkAccess: 'Disabled'
@@ -46,8 +44,6 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
     }
   }
 }
-
-// Add a table to the database
 
 resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: substring(replace('${databaseName}deploymentstorage', '-', ''), 0, 24)
@@ -73,7 +69,6 @@ resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' 
   }
 }
 
-// take a look to https://johnlokerse.dev/2022/12/04/run-powershell-scripts-with-azure-bicep/
 // add needed role definition based on
 // https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-script-template#configure-the-minimum-permissions
 resource storagedatacontributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
@@ -99,16 +94,17 @@ resource storagedatacontributor 'Microsoft.Authorization/roleDefinitions@2022-04
   }
 }
 
+// assign the role to the deployment identity
 resource deploymentMI 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: resourceGroup()
-  name: guid(resourceGroup().id, '-deployment-MI')
+  name: guid(resourceGroup().id, deploymentIdentityPrincipalId, 'deployment-role-assignment')
   properties: {
-    // TODO: use a different identity
     principalId: deploymentIdentityPrincipalId
     roleDefinitionId: storagedatacontributor.id
   }
 }
 
+// create private endpoints for the storage account
 module storagePrivateEndpoint 'privateEndpoint.bicep' = {
   name: '${databaseName}-deployment-storage-pe'
   params: {
@@ -121,6 +117,19 @@ module storagePrivateEndpoint 'privateEndpoint.bicep' = {
   }
 }
 
+// create private endpoints for the SQL Server
+module dbPrivateEndpoint 'privateEndpoint.bicep' = {
+  name: '${databaseName}-sql-server-pe'
+  params: {
+    location: location
+    name: '${databaseName}-sql-server-pe'
+    privateLinkServiceId: sqlServer.id
+    subnetId: storageSubnetId
+    targetSubResource: 'sqlServer'
+    vnetId: vnetId
+  }
+}
+
 resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   name: '${databaseName}-deployment-script'
   location: location
@@ -128,7 +137,7 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${deploymentIdentityId}': {}
+      '${deploymentIdentityResourceId}': {}
     }
   }
   properties: {
@@ -142,14 +151,14 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
     containerSettings: {
       subnetIds: [
         {
-          id: scriptSubnetId // run the script in a subnet with access to SQL Server
+          id: scriptRunnerSubnetId // run the script in a subnet with access to SQL Server
         }
       ]
     }
     environmentVariables: [
       {
-        name: 'APPUSERNAME'
-        value: managedIdentityId
+        name: 'CLIENTID'
+        value: deploymentIdentityClientId
       }
       {
         name: 'DBNAME'
@@ -159,27 +168,30 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
         name: 'DBSERVER'
         value: sqlServer.properties.fullyQualifiedDomainName
       }
-      { name: 'TABLENAME', value: 'Values' }
+      { name: 'TABLENAME', value: 'Value_Store' }
+      { name: 'APPIDENTITYNAME', value: appIdentityName }
     ]
 
     scriptContent: '''
 wget https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2
 tar x -f sqlcmd-linux-amd64.tar.bz2 -C .
 
+# before running this the MI needs to have Directory Readers role in Entra
+
 cat <<SCRIPT_END > ./initDb.sql
-drop user if exists ${APPUSERNAME}
+drop user if exists [${APPIDENTITYNAME}]
 go
-create user ${APPUSERNAME} FROM EXTERNAL PROVIDER
+create user [${APPIDENTITYNAME}] FROM EXTERNAL PROVIDER
 go
-alter role db_owner add member ${APPUSERNAME}
+alter role db_owner add member [${APPIDENTITYNAME}]
 go
-create table ${TABLENAME} (nvarchar(50) key not null, [value] nvarchar(255),
-                           constraint pk_${TABLENAME}_key primary key (nvarchar(50)))
+create table ${TABLENAME} ([key] nvarchar(50) PRIMARY KEY, [stored_value] nvarchar(255))
 go
 SCRIPT_END
 
 echo "Initializing database ${DBNAME} on server ${DBSERVER}"
-./sqlcmd -S ${DBSERVER} -d ${DBNAME} -i ./initDb.sql
+./sqlcmd -S "${DBSERVER}" -d "${DBNAME}" --authentication-method ActiveDirectoryManagedIdentity -U \
+"${CLIENTID}" -i ./initDb.sql
     '''
   }
 }

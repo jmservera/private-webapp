@@ -4,9 +4,9 @@ param sqlAdminLogin string = 'sqladmin'
 @secure()
 param sqlAdminPassword string
 param tags object = {}
-@description('Id of the user or app to assign application roles')
-param userSID string
-param aadUserName string
+// @description('Id of the user or app to assign application roles')
+// param userSID string
+// param aadUserName string
 @description('GH Runner VM admin password if needed, you may leave it empty if using key authentication')
 @secure()
 param adminPassword string = ''
@@ -60,14 +60,6 @@ module backendAppIdentity 'br/public:avm/res/managed-identity/user-assigned-iden
   }
 }
 
-module deploymentIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.2.1' = {
-  name: 'deploymentIdentity'
-  params: {
-    name: '${abbrs.managedIdentityUserAssignedIdentities}deployment-${resourceToken}'
-    location: location
-  }
-}
-
 // Backend web app with private access
 module backEndApp './modules/webApp.bicep' = {
   name: 'backEndApp'
@@ -105,17 +97,15 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     location: location
     adminLogin: sqlAdminLogin
     adminPassword: sqlAdminPassword
-    managedIdentityId: backendAppIdentity.outputs.principalId
-    deploymentIdentityId: deploymentIdentity.outputs.resourceId
-    deploymentIdentityPrincipalId: deploymentIdentity.outputs.principalId
-    scriptSubnetId: vnet.outputs.ciSubnetId
+    deploymentIdentityName: ghRunnerAppIdentity.outputs.name
+    deploymentIdentityClientId: ghRunnerAppIdentity.outputs.clientId
+    deploymentIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
+    deploymentIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
+    scriptRunnerSubnetId: vnet.outputs.ciSubnetId
     storageSubnetId: vnet.outputs.privateSubnetId
-    sqlAdminIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
-    sqlAdminIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
     vnetId: vnet.outputs.vnetId
     clientIpAddress: clientIpAddress
-    userSID: userSID
-    aadUserName: aadUserName
+    appIdentityName: backendAppIdentity.outputs.name
   }
 }
 

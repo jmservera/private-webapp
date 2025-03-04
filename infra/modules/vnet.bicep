@@ -27,7 +27,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
         }
       }
       {
-        name: 'private-subnet'
+        name: 'private-subnet' //TODO: rename to private endpoint subnet
         properties: {
           addressPrefix: '10.0.1.0/24'
           privateEndpointNetworkPolicies: 'Disabled'

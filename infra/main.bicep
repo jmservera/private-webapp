@@ -7,9 +7,9 @@ param environmentName string
 
 @description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
 param clientIpAddress string
-@description('Id of the user or app to assign application roles')
-param userSID string
-param aadUserName string
+// @description('Id of the user or app to assign application roles')
+// param userSID string
+// param aadUserName string
 
 param publicKey string
 param repo_owner string
@@ -61,12 +61,8 @@ module resources './resources.bicep' = {
     adminPassword: adminPassword
     githubPAT: githubPAT
     clientIpAddress: clientIpAddress
-    userSID: userSID
-    aadUserName: aadUserName
   }
 }
 
-// output AZURE_KEY_VAULT_ENDPOINT string = resources.outputs.AZURE_KEY_VAULT_ENDPOINT
-// output AZURE_KEY_VAULT_NAME string = resources.outputs.AZURE_KEY_VAULT_NAME
 output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
 output RESOURCE_GROUP string = rg.name
