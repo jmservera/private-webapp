@@ -73,6 +73,7 @@ resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' 
   }
 }
 
+// take a look to https://johnlokerse.dev/2022/12/04/run-powershell-scripts-with-azure-bicep/
 // add needed role definition based on
 // https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-script-template#configure-the-minimum-permissions
 resource storagedatacontributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
@@ -115,7 +116,7 @@ module storagePrivateEndpoint 'privateEndpoint.bicep' = {
     name: '${databaseName}-deployment-storage-pe'
     privateLinkServiceId: deploymentScriptStorage.id
     subnetId: storageSubnetId
-    targetSubResource: 'blob'
+    targetSubResource: 'file'
     vnetId: vnetId
   }
 }

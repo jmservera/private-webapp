@@ -11,6 +11,7 @@ param endpointName string = 'pe${name}${uniqueString(resourceGroup().id)}'
   'webpubsub'
   'sites'
   'blob'
+  'file'
   'sqlServer'
 ])
 param targetSubResource string
@@ -19,6 +20,7 @@ var dnsByTarget = {
   webpubsub: 'privatelink.webpubsub.azure.com'
   sites: 'privatelink.azurewebsites.net'
   blob: 'privatelink.blob.${environment().suffixes.storage}'
+  file: 'privatelink.file.${environment().suffixes.storage}'
   sqlServer: 'privatelink${environment().suffixes.sqlServerHostname}' // dont' know why but sqlserverhostname suffix already contains the dot
 }
 
