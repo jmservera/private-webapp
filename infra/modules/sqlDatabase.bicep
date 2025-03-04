@@ -97,7 +97,7 @@ resource deploymentMI 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     // TODO: use a different identity
     principalId: sqlAdminIdentityPrincipalId
-    roleDefinitionId: storagedatacontributor.id // Contributor role
+    roleDefinitionId: storagedatacontributor.id
   }
 }
 
@@ -130,7 +130,6 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
     cleanupPreference: 'OnSuccess'
     storageAccountSettings: {
       storageAccountName: deploymentScriptStorage.name
-      storageAccountKey: deploymentScriptStorage.listKeys().keys[0].value // TODO: use MI      
     }
     containerSettings: {      
       subnetIds: [
