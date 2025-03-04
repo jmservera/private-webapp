@@ -12,6 +12,7 @@ param sqlAdminIdentityPrincipalId string
 param deploymentIdentityId string
 param deploymentIdentityPrincipalId string
 param scriptSubnetId string
+param storageSubnetId string
 param vnetId string
 param clientIpAddress string
 param userSID string
@@ -113,7 +114,7 @@ module storagePrivateEndpoint 'privateEndpoint.bicep' = {
     location: location
     name: '${databaseName}-deployment-storage-pe'
     privateLinkServiceId: deploymentScriptStorage.id
-    subnetId: scriptSubnetId
+    subnetId: storageSubnetId
     targetSubResource: 'blob'
     vnetId: vnetId
   }

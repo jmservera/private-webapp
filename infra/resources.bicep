@@ -109,6 +109,7 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     deploymentIdentityId: deploymentIdentity.outputs.resourceId
     deploymentIdentityPrincipalId: deploymentIdentity.outputs.principalId
     scriptSubnetId: vnet.outputs.ciSubnetId
+    storageSubnetId: vnet.outputs.privateSubnetId
     sqlAdminIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
     sqlAdminIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
     vnetId: vnet.outputs.vnetId
