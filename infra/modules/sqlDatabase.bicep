@@ -9,12 +9,13 @@ param managedIdentityId string
 
 param sqlAdminIdentityResourceId string
 param sqlAdminIdentityPrincipalId string
+param deploymentIdentityId string
+param deploymentIdentityPrincipalId string
 param scriptSubnetId string
 param vnetId string
 param clientIpAddress string
 param userSID string
 param aadUserName string
-
 
 resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   name: serverName
@@ -57,7 +58,7 @@ resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' 
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       resourceAccessRules: []
-      bypass:'AzureServices'
+      bypass: 'AzureServices'
       virtualNetworkRules: []
       ipRules: [
         {
@@ -66,14 +67,14 @@ resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' 
         }
       ]
       defaultAction: 'Deny'
-    }    
+    }
     accessTier: 'Hot'
   }
 }
 
 // add needed role definition based on
 // https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-script-template#configure-the-minimum-permissions
-resource storagedatacontributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {  
+resource storagedatacontributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: guid(deploymentScriptStorage.name, 'blob-data-contributor-role')
   properties: {
     roleName: '${deploymentScriptStorage.name}-blob-data-contributor-role'
@@ -85,18 +86,23 @@ resource storagedatacontributor 'Microsoft.Authorization/roleDefinitions@2022-04
           'Microsoft.Storage/storageAccounts/*'
           'Microsoft.ContainerInstance/containerGroups/*'
           'Microsoft.Resources/deployments/*'
-          'Microsoft.Resources/deploymentScripts/*']
-        }
-      ]
+          'Microsoft.Resources/deploymentScripts/*'
+        ]
+        // NOT DOCUMENTED BUT REQUIRED
+        dataActions: [
+          'Microsoft.Storage/storageAccounts/fileServices/*'
+        ]
+      }
+    ]
   }
 }
 
 resource deploymentMI 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: resourceGroup()
-  name: guid(resourceGroup().id, 'deployment-MI')
+  name: guid(resourceGroup().id, '-deployment-MI')
   properties: {
     // TODO: use a different identity
-    principalId: sqlAdminIdentityPrincipalId
+    principalId: deploymentIdentityPrincipalId
     roleDefinitionId: storagedatacontributor.id
   }
 }
@@ -120,10 +126,10 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${sqlAdminIdentityResourceId}': {}
+      '${deploymentIdentityId}': {}
     }
   }
-  properties: {    
+  properties: {
     azCliVersion: '2.37.0'
     retentionInterval: 'PT1H' // Retain the script resource for 1 hour after it ends running
     timeout: 'PT5M' // Five minutes
@@ -131,7 +137,7 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
     storageAccountSettings: {
       storageAccountName: deploymentScriptStorage.name
     }
-    containerSettings: {      
+    containerSettings: {
       subnetIds: [
         {
           id: scriptSubnetId // run the script in a subnet with access to SQL Server

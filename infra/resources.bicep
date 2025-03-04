@@ -60,6 +60,14 @@ module backendAppIdentity 'br/public:avm/res/managed-identity/user-assigned-iden
   }
 }
 
+module deploymentIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.2.1' = {
+  name: 'deploymentIdentity'
+  params: {
+    name: '${abbrs.managedIdentityUserAssignedIdentities}deployment-${resourceToken}'
+    location: location
+  }
+}
+
 // Backend web app with private access
 module backEndApp './modules/webApp.bicep' = {
   name: 'backEndApp'
@@ -98,7 +106,9 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     adminLogin: sqlAdminLogin
     adminPassword: sqlAdminPassword
     managedIdentityId: backendAppIdentity.outputs.principalId
-    scriptSubnetId: vnet.outputs.vmSubnetId
+    deploymentIdentityId: deploymentIdentity.outputs.resourceId
+    deploymentIdentityPrincipalId: deploymentIdentity.outputs.principalId
+    scriptSubnetId: vnet.outputs.ciSubnetId
     sqlAdminIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
     sqlAdminIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
     vnetId: vnet.outputs.vnetId
