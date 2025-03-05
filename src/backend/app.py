@@ -26,6 +26,7 @@ def create_value():
     key = request.json.get('key')
     value = request.json.get('value')
     conn.execute("INSERT INTO ${TableName} ([key], [stored_value]) VALUES (?, ?)", key, value)
+    conn.commit()
     return jsonify({"message": "Value set successfully"}), 200
 
 @app.route('/set', methods=['POST'])
@@ -33,6 +34,7 @@ def set_value():
     key = request.json.get('key')
     value = request.json.get('value')
     conn.execute("UPDATE ${TableName} ([key], [stored_value]) VALUES (?, ?)", key, value)
+    conn.commit()
     return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
