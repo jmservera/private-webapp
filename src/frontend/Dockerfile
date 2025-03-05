@@ -1,6 +1,7 @@
 # Use the official Python image from the Docker Hub
 FROM python:3.13-slim
 
+RUN apt update && apt install unixodbc -y
 # Set the working directory
 WORKDIR /app
 
