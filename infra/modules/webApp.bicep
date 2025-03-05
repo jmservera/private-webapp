@@ -36,6 +36,7 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
       ftpsState: 'Disabled'
       appSettings: appSettings
       connectionStrings: connectionStrings
+      healthCheckPath: '/health'
     }
     virtualNetworkSubnetId: virtualNetworkSubnetId
   }
