@@ -10,15 +10,15 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip
 
-# RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-# RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
-# RUN apt-get update
-# RUN env ACCEPT_EULA=Y apt-get install -y msodbcsql18
+RUN apt-get update
+RUN env ACCEPT_EULA=Y apt-get install -y msodbcsql18
 
-# COPY /odbc.ini / 
-# RUN odbcinst -i -s -f /odbc.ini -l
-# RUN cat /etc/odbc.ini
+COPY ./odbc.ini /
+RUN odbcinst -i -s -f /odbc.ini -l
+RUN cat /etc/odbc.ini
 
 # Set the working directory
 WORKDIR /app
