@@ -125,8 +125,14 @@ def index():
 @app.route('/set', methods=['POST'])
 def set_value():
     # send a rest post request to the backend
-    requests.post(backend + '/set', json=request.json)
-    return jsonify({"message": "Value set successfully"}), 200
+    r=requests.post(backend + '/set', json=request.json)
+    return r # jsonify({"message": "Value set successfully"}), 200
+
+@app.route('/update', methods=['POST'])
+def update_value():
+    # send a rest post request to the backend
+    r=requests.post(backend + '/update', json=request.json)
+    return r
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
