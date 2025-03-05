@@ -26,6 +26,14 @@ def index():
             <input type="text" id="value" name="value" required>
             <button type="submit">Submit</button>
         </form>
+        <h2>Update Value</h2>
+        <form id="updateValueForm">
+            <label for="ukey">Key:</label>
+            <input type="text" id="ukey" name="ukey" required>
+            <label for="uvalue">Value:</label>
+            <input type="text" id="uvalue" name="uvalue" required>
+            <button type="submit">Submit</button>
+        </form>
         <h2>Get Value</h2>
         <form id="getValueForm">
             <label for="getKey">Key:</label>
@@ -57,6 +65,31 @@ def index():
                     body: JSON.stringify({ key: key, value: value })
                 }).then(response => response.json()).then(data => {
                     if (data.message === 'Value set successfully') {
+                        const table = document.getElementById('valuesTable').getElementsByTagName('tbody')[0];
+                        const newRow = table.insertRow();
+                        const cellKey = newRow.insertCell(0);
+                        const cellValue = newRow.insertCell(1);
+                        cellKey.textContent = key;
+                        cellValue.textContent = value;
+                    } else {
+                        alert('Failed to set value: ' + data.message);
+                    }
+                }).catch(error => {
+                    alert('An error occurred: ' + error.message);
+                });
+            };
+            document.getElementById('updateValueForm').onsubmit = function(event) {
+                event.preventDefault();
+                const key = document.getElementById('ukey').value;
+                const value = document.getElementById('uvalue').value;
+                fetch('/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ key: key, value: value })
+                }).then(response => response.json()).then(data => {
+                    if (data.message === 'Value updated successfully') {
                         const table = document.getElementById('valuesTable').getElementsByTagName('tbody')[0];
                         const newRow = table.insertRow();
                         const cellKey = newRow.insertCell(0);

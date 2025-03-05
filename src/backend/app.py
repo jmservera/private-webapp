@@ -21,26 +21,26 @@ def health():
 
     return jsonify({"message": "Healthy"}), 200
 
-@app.route('/create', methods=['POST'])
+@app.route('/set', methods=['POST'])
 def create_value():
     key = request.json.get('key')
     value = request.json.get('value')
-    conn.execute("INSERT INTO ${TableName} ([key], [stored_value]) VALUES (?, ?)", key, value)
+    conn.execute("INSERT INTO ${TableName} ([key], [stored_value]) VALUES (?, ?);", key, value)
     conn.commit()
     return jsonify({"message": "Value set successfully"}), 200
 
-@app.route('/set', methods=['POST'])
+@app.route('/update', methods=['POST'])
 def set_value():
     key = request.json.get('key')
     value = request.json.get('value')
-    conn.execute("UPDATE ${TableName} ([key], [stored_value]) VALUES (?, ?)", key, value)
+    conn.execute("UPDATE ${TableName} SET [stored_value] = ? WHERE [key] = ?;", value, key)
     conn.commit()
     return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
     cursor = conn.cursor()
-    cursor.execute("SELECT [stored_value] FROM ${TableName} WHERE [key] = ?", (key,))
+    cursor.execute("SELECT [stored_value] FROM ${TableName} WHERE [key] = ?;", (key,))
     row = cursor.fetchone()
     if row:
         return jsonify({"key": key, "value": row[0]}), 200
