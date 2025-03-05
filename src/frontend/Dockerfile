@@ -1,7 +1,6 @@
 # Use the official Python image from the Docker Hub
 FROM python:3.13-slim
 
-RUN apt update && apt install unixodbc tdsodbc unixodbc-dev -y && apt install --reinstall build-essential -y
 # Set the working directory
 WORKDIR /app
 
