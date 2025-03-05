@@ -209,7 +209,8 @@ CREATE USER [${APPIDENTITYNAME}] WITH DEFAULT_SCHEMA=[dbo], SID = $SID, TYPE = E
 go
 -- alter role db_owner add member [${APPIDENTITYNAME}]
 -- go
-create table ${TABLENAME} ([key] nvarchar(50) PRIMARY KEY, [stored_value] nvarchar(255))
+IF object_id('${TABLENAME}', 'U') is not null
+    create table ${TABLENAME} ([key] nvarchar(50) PRIMARY KEY, [stored_value] nvarchar(255));
 go
 SCRIPT_END
 

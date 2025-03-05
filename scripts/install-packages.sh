@@ -47,29 +47,34 @@ $RUNAS bash<<_
 set -e
 echo "Installing the self-hosted runner..."
 # Create a folder
-mkdir actions-runner && cd actions-runner
-# Download the latest runner package
-curl -O -L https://github.com/actions/runner/releases/download/v2.320.1/actions-runner-linux-x64-2.320.1.tar.gz
-# Extract the installer
-tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
+if [ -d "actions-runner" ]; then
+  echo "actions-runner already exist, installer not needed."
+  exit 0
+else
+  mkdir actions-runner && cd actions-runner
+  # Download the latest runner package
+  curl -O -L https://github.com/actions/runner/releases/download/v2.320.1/actions-runner-linux-x64-2.320.1.tar.gz
+  # Extract the installer
+  tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
-echo "Runner package extracted successfully!"
+  echo "Runner package extracted successfully!"
 
-#
-#    Review how to get the runner PAT from the GitHub pat using the reg token
-#    //         "name": "REGISTRATION_TOKEN_API_URL",
-#    //         "value": "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
-#
+  #
+  #    Review how to get the runner PAT from the GitHub pat using the reg token
+  #    //         "name": "REGISTRATION_TOKEN_API_URL",
+  #    //         "value": "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
+  #
 
-echo "Configuring the self-hosted runner with user ${USER}..."
-./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_REPO_TOKEN}" --labels  self-hosted --unattended
-echo "Runner configured successfully!"
-echo "Installing the self-hosted runner as a service..."
-sudo ./svc.sh install
-echo "Runner installed successfully!"
-echo "Starting the self-hosted runner service..."
-sudo ./svc.sh start
-echo "Runner service started successfully!"
+  echo "Configuring the self-hosted runner with user ${USER}..."
+  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_REPO_TOKEN}" --labels  self-hosted --unattended
+  echo "Runner configured successfully!"
+  echo "Installing the self-hosted runner as a service..."
+  sudo ./svc.sh install
+  echo "Runner installed successfully!"
+  echo "Starting the self-hosted runner service..."
+  sudo ./svc.sh start
+  echo "Runner service started successfully!"
+fi
 _
 
 echo "Self-hosted runner installation completed successfully!"
