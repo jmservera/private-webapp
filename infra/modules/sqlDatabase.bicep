@@ -29,7 +29,7 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
       login: deploymentIdentityName
       azureADOnlyAuthentication: false
       principalType: 'Application'
-      sid: deploymentIdentityPrincipalId
+      sid: deploymentIdentityClientId
       tenantId: subscription().tenantId
     }
     publicNetworkAccess: 'Disabled'
