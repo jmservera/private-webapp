@@ -49,6 +49,12 @@ module frontEndApp './modules/webApp.bicep' = {
     skuTier: 'Standard'
     publicNetworkAccess: 'Enabled'
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
+    appSettings: [
+      {
+        name: 'BACKEND'
+        value: backEndApp.outputs.url
+      }
+    ]
   }
 }
 
@@ -155,7 +161,7 @@ module frontendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assi
 module backendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
   name: 'backendWebAppAcrPull'
   params: {
-    principalId: backEndApp.outputs.principalId
+    principalId: backendAppIdentity.outputs.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
     resourceId: containerRegistry.outputs.resourceId
@@ -172,19 +178,6 @@ module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = {
     subnetId: vnet.outputs.privateSubnetId
     privateLinkServiceId: backEndApp.outputs.id
     targetSubResource: 'sites'
-  }
-}
-
-// Private endpoint for SQL
-module sqlPrivateEndpoint './modules/privateEndpoint.bicep' = {
-  name: 'sqlPrivateEndpoint'
-  params: {
-    name: '${namePrefix}-sql'
-    location: location
-    subnetId: vnet.outputs.privateSubnetId
-    vnetId: vnet.outputs.vnetId
-    privateLinkServiceId: sqlDb.outputs.serverId
-    targetSubResource: 'sqlServer'
   }
 }
 
@@ -305,3 +298,5 @@ output AZURE_RESOURCE_GHRUNNER_ID string = ghRunner.outputs.resourceId
 output acrName string = containerRegistry.outputs.name
 output acrLoginServer string = containerRegistry.outputs.loginServer
 output resourceGroup string = resourceGroup().name
+output sqlServerEndpoint string = sqlDb.outputs.endpoint
+output sqlDatabaseName string = sqlDb.outputs.databaseName

@@ -141,6 +141,10 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
       '${deploymentIdentityResourceId}': {}
     }
   }
+  dependsOn:[
+    dbPrivateEndpoint
+    storagePrivateEndpoint
+  ]
   properties: {
     azCliVersion: '2.37.0'
     retentionInterval: 'PT1H' // Retain the script resource for 1 hour after it ends running
@@ -163,7 +167,7 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
       }
       {
         name: 'DBNAME'
-        value: databaseName
+        value: sqlServer::database.name
       }
       {
         name: 'DBSERVER'

@@ -54,4 +54,4 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
 output id string = site.id
 output name string = site.name
 output url string = 'https://${site.properties.defaultHostName}'
-output principalId string = site.identity.principalId
+output principalId string = identityId==''? site.identity.principalId : ''
