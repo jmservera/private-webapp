@@ -38,7 +38,7 @@ def set_value():
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
     cursor = conn.cursor()
-    cursor.execute("SELECT [stored_value] FROM ${TableName} WHERE [key] = ?", key)
+    cursor.execute("SELECT [stored_value] FROM ${TableName} WHERE [key] = ?", (key,))
     row = cursor.fetchone()
     if row:
         return jsonify({"key": key, "value": row[0]}), 200
