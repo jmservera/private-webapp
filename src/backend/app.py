@@ -25,20 +25,20 @@ def health():
 def create_value():
     key = request.json.get('key')
     value = request.json.get('value')
-    conn.execute("INSERT INTO ${TableName} ([keys], [values]) VALUES (?, ?)", key, value)
+    conn.execute("INSERT INTO ${TableName} ([key], [stored_value]) VALUES (?, ?)", key, value)
     return jsonify({"message": "Value set successfully"}), 200
 
 @app.route('/set', methods=['POST'])
 def set_value():
     key = request.json.get('key')
     value = request.json.get('value')
-    conn.execute("UPDATE ${TableName} ([keys], [values]) VALUES (?, ?)", key, value)
+    conn.execute("UPDATE ${TableName} ([key], [stored_value]) VALUES (?, ?)", key, value)
     return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
     cursor = conn.cursor()
-    cursor.execute("SELECT [values] FROM ${TableName} WHERE [keys] = ?", key)
+    cursor.execute("SELECT [stored_value] FROM ${TableName} WHERE [keys] = ?", key)
     row = cursor.fetchone()
     if row:
         return jsonify({"key": key, "value": row[0]}), 200

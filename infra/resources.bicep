@@ -74,7 +74,7 @@ module backEndApp './modules/webApp.bicep' = {
     appSettings: [
       {
         name: 'TableName'
-        value: 'Values'
+        value: 'Value_Store'
       }
     ]
     identityId: backendAppIdentity.outputs.resourceId
@@ -106,6 +106,7 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     vnetId: vnet.outputs.vnetId
     clientIpAddress: clientIpAddress
     appIdentityName: backendAppIdentity.outputs.name
+    appIdentityClientId: backendAppIdentity.outputs.clientId
   }
 }
 
