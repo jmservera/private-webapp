@@ -29,6 +29,8 @@ COPY *.py .
 
 # Expose the port the app runs on
 EXPOSE 8080
+ENV ConnectionString=""
+ENV TableName=""
 
 # Run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
