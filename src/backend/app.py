@@ -11,9 +11,17 @@ logging.getLogger().setLevel(logging.INFO)
 
 app = Flask(__name__)
 
+
+
+logging.info("Reading environment variables")
+table_name = os.environ["TableName"]
+conn_str = os.environ["ConnectionString"]
+
 conn = None
-def getConnection(conn_str:str)->pyodbc.Connection:
+
+def getConnection()->pyodbc.Connection:
     global conn
+    global conn_str
     try:
         if conn is None:
             logging.info("Connecting to database")
@@ -22,10 +30,6 @@ def getConnection(conn_str:str)->pyodbc.Connection:
         logging.error("Error connecting to database: %s %s", conn_str, e)
 
     return conn
-
-logging.info("Reading environment variables")
-table_name = os.environ["TableName"]
-conn_str = os.environ["ConnectionString"]
 
 @app.route('/health', methods=['GET'])
 def health():
