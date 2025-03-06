@@ -90,5 +90,5 @@ jobs:
           inlineScript: |
             az webapp config container set --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP \
               --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} \
-              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }}
+              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --app-settings MYSETTING=TEST
             az webapp restart --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP
