@@ -11,17 +11,27 @@ logging.getLogger().setLevel(logging.INFO)
 
 app = Flask(__name__)
 
+conn = None
+def getConnection(conn_str:str)->pyodbc.Connection:
+    global conn
+    try:
+        if conn is None:
+            logging.info("Connecting to database")
+            conn = pyodbc.connect(conn_str)        
+    except pyodbc.Error as e:
+        logging.error("Error connecting to database: %s %s", conn_str, e)
+
+    return conn
+
 logging.info("Reading environment variables")
 table_name = os.environ["TableName"]
 conn_str = os.environ["ConnectionString"]
-
-conn = pyodbc.connect(conn_str)
 
 @app.route('/health', methods=['GET'])
 def health():
     # check if the redis server is healthy
     try:
-        _ = conn.getinfo()
+        _ = getConnection().getinfo()
     except pyodbc.Error:
         return jsonify({"message": "Unhealthy"}), 500
 
@@ -34,6 +44,7 @@ def create_value():
     value = request.json.get('value')
     query=f"INSERT INTO {table_name}([key], [stored_value]) VALUES (?, ?)"
     logging.info("Query %s",query)
+    conn = getConnection()
     conn.execute(query, key, value)
     conn.commit()
     return jsonify({"message": "Value set successfully"}), 200
@@ -42,12 +53,14 @@ def create_value():
 def set_value():
     key = request.json.get('key')
     value = request.json.get('value')
+    conn = getConnection()
     conn.execute(f"UPDATE {table_name} SET [stored_value] = ? WHERE [key] = ?;", value, key)
     conn.commit()
     return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
+    conn = getConnection()
     cursor = conn.cursor()
     cursor.execute(f"SELECT [stored_value] FROM {table_name} WHERE [key] = ?;", (key,))
     row = cursor.fetchone()
