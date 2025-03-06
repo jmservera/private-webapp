@@ -8,10 +8,9 @@ logging.getLogger().setLevel(logging.INFO)
 
 app = Flask(__name__)
 
-
-conn_str = os.environ["ConnectionString"]
+logging.info("Reading environment variables")
 table_name = os.environ["TableName"]
-
+conn_str = os.environ["ConnectionString"]
 
 conn = pyodbc.connect(conn_str)
 
