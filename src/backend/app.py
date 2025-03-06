@@ -38,7 +38,8 @@ def health():
     # check if the redis server is healthy
     try:
         conn = getConnection()
-        conn.getinfo()
+        info=conn.getinfo(pyodbc.SQL_DBMS_NAME)
+        logging.info("DBMS Name: %s",info)
     except pyodbc.Error:
         return jsonify({"message": "Unhealthy"}), 500
 
