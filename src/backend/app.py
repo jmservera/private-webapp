@@ -2,6 +2,9 @@ from flask import Flask, request, jsonify
 import pyodbc
 import os
 import logging
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
