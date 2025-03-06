@@ -16,26 +16,29 @@ app = Flask(__name__)
 logging.info("Reading environment variables")
 table_name = os.environ["TableName"]
 conn_str = os.environ["ConnectionString"]
-
 conn = None
 
 def getConnection()->pyodbc.Connection:
     global conn
     global conn_str
+
     try:
         if conn is None:
             logging.info("Connecting to database")
             conn = pyodbc.connect(conn_str)        
     except pyodbc.Error as e:
-        logging.error("Error connecting to database: %s %s", conn_str, e)
+        logging.error("Error connecting to database: %s \n\t %s", conn_str, e)
 
     return conn
+
+_ = getConnection()
 
 @app.route('/health', methods=['GET'])
 def health():
     # check if the redis server is healthy
     try:
-        _ = getConnection().getinfo()
+        conn = getConnection()
+        conn.getinfo()
     except pyodbc.Error:
         return jsonify({"message": "Unhealthy"}), 500
 
