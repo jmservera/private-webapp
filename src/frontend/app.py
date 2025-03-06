@@ -4,6 +4,7 @@ import os
 import re
 
 backend = os.getenv("BACKEND", "http://localhost:8080")
+PORT = os.getenv("PORT", 80)
 
 app = Flask(__name__)
 
@@ -126,13 +127,13 @@ def index():
 def set_value():
     # send a rest post request to the backend
     r=requests.post(backend + '/set', json=request.json)
-    return r # jsonify({"message": "Value set successfully"}), 200
+    return r.json(), r.status_code # jsonify({"message": "Value set successfully"}), 200
 
 @app.route('/update', methods=['POST'])
 def update_value():
     # send a rest post request to the backend
     r=requests.post(backend + '/update', json=request.json)
-    return r
+    return r.json(), r.status_code
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
@@ -171,4 +172,4 @@ def health():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)
+    app.run(host='0.0.0.0', port=PORT)

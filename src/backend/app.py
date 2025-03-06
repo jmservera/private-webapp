@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify
 import pyodbc
 import os
+import logging
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
 
 app = Flask(__name__)
 
@@ -23,9 +27,12 @@ def health():
 
 @app.route('/set', methods=['POST'])
 def create_value():
+    logging.info("Value %s",request.json)
     key = request.json.get('key')
     value = request.json.get('value')
-    conn.execute("INSERT INTO ${TableName} ([key], [stored_value]) VALUES (?, ?);", key, value)
+    query=f"INSERT INTO {table_name}([key], [stored_value]) VALUES (?, ?)"
+    logging.info("Query %s",query)
+    conn.execute(query, key, value)
     conn.commit()
     return jsonify({"message": "Value set successfully"}), 200
 
@@ -33,14 +40,14 @@ def create_value():
 def set_value():
     key = request.json.get('key')
     value = request.json.get('value')
-    conn.execute("UPDATE ${TableName} SET [stored_value] = ? WHERE [key] = ?;", value, key)
+    conn.execute(f"UPDATE {table_name} SET [stored_value] = ? WHERE [key] = ?;", value, key)
     conn.commit()
     return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
     cursor = conn.cursor()
-    cursor.execute("SELECT [stored_value] FROM ${TableName} WHERE [key] = ?;", (key,))
+    cursor.execute(f"SELECT [stored_value] FROM {table_name} WHERE [key] = ?;", (key,))
     row = cursor.fetchone()
     if row:
         return jsonify({"key": key, "value": row[0]}), 200

@@ -82,15 +82,19 @@ module backEndApp './modules/webApp.bicep' = {
         name: 'TableName'
         value: 'Value_Store'
       }
-    ]
-    identityId: backendAppIdentity.outputs.resourceId
-    connectionStrings: [
       {
         name: 'ConnectionString'
-        type: 'SQLAzure'
-        value: 'Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Authentication=Active Directory Managed Identity;Encrypt=true;Connection Timeout=30;'
+        value: 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;Authentication=ActiveDirectoryMsi;'
       }
     ]
+    identityId: backendAppIdentity.outputs.resourceId
+    // connectionStrings: [
+    //   {
+    //     name: 'ConnectionString'
+    //     type: 'SQLAzure'
+    //     value: 'Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Authentication=Active Directory Managed Identity;Encrypt=true;Connection Timeout=30;'
+    //   }
+    // ]
   }
 }
 
