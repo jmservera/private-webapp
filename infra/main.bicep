@@ -7,10 +7,6 @@ param environmentName string
 
 @description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
 param clientIpAddress string
-// @description('Id of the user or app to assign application roles')
-// param userSID string
-// param aadUserName string
-
 param publicKey string
 param repo_owner string
 param repo_name string

@@ -6,9 +6,7 @@ hooks:
     run: |
       echo "Setting up environment variables..."
       azd env set CLIENT_IP_ADDRESS $(curl ifconfig.me 2>/dev/null | tr -d '\r')
-      USRNAME=$(az account show --query "user.name" -o tsv | tr -d '\r')
-      azd env set USER_NAME $USRNAME      
-      azd env set USER_SID $(az ad user show --id "$USRNAME" --query id -o tsv | tr -d '\r')
+      echo "Done"
     interactive: true
     shell: sh
   postup:
