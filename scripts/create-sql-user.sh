@@ -31,6 +31,9 @@ cat <<SCRIPT_END > ./initDb.sql
 drop user if exists [${APPIDENTITYNAME}]
 go
 CREATE USER [${APPIDENTITYNAME}] WITH DEFAULT_SCHEMA=[dbo], SID = $SID, TYPE = E;
+ALTER ROLE db_datareader ADD MEMBER [${APPIDENTITYNAME}];
+ALTER ROLE db_datawriter ADD MEMBER [${APPIDENTITYNAME}];
+ALTER ROLE db_ddladmin ADD MEMBER [${APPIDENTITYNAME}];
 go
 -- alter role db_owner add member [${APPIDENTITYNAME}]
 -- go
