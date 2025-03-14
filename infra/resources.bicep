@@ -26,6 +26,9 @@ param githubPAT string
 @description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
 param clientIpAddress string
 
+@description('Set to false to make the critical resources public. Use this only for testing.')
+param private bool = true
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
@@ -117,6 +120,7 @@ module sqlDb './modules/sqlDatabase.bicep' = {
     clientIpAddress: clientIpAddress
     appIdentityName: backendAppIdentity.outputs.name
     appIdentityClientId: backendAppIdentity.outputs.clientId
+    private: private
   }
 }
 
@@ -173,7 +177,7 @@ module backendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assig
 }
 
 // Private endpoint for backend
-module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = {
+module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = if(private) {
   name: 'backEndPrivateEndpoint'
   params: {
     name: '${namePrefix}-backend'
@@ -276,19 +280,33 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
         path: '/home/localAdminUser/.ssh/authorized_keys'
       }
     ]
-    extensionCustomScriptConfig: {
-      enabled: true
-      fileData: [
-        {
-          uri: 'https://raw.githubusercontent.com/jmservera/private-webapp/refs/heads/main/scripts/install-packages.sh'
-        }
-      ]
-    }
-    extensionCustomScriptProtectedSetting: {
-      commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPAT} GITHUB_REPO_TOKEN=${githubToken} bash install-packages.sh'
-    }
+    // extensionCustomScriptConfig: {
+    //   enabled: true
+    //   fileData: [
+    //     {
+    //       uri: 'https://raw.githubusercontent.com/jmservera/private-webapp/refs/heads/main/scripts/install-packages.sh'
+    //     }
+    //   ]
+    // }
+    // extensionCustomScriptProtectedSetting: {
+    //   commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPAT} GITHUB_REPO_TOKEN=${githubToken} bash install-packages.sh'
+    // }
   }
 }
+
+module ghRunnerScriptExtension './modules/ghScript.bicep' = {
+  name: 'ghRunnerScriptExtension'
+  params: {
+    location: location
+    ghRunnerName: ghRunner.outputs.name
+    repo_name: repo_name
+    repo_owner: repo_owner
+    githubPAT: githubPAT
+    adminUserName: adminUserName
+    identityClientId: ghRunnerAppIdentity.outputs.clientId
+  }
+}
+
 
 // Output important values
 output frontendUrl string = frontEndApp.outputs.url
@@ -304,3 +322,7 @@ output acrLoginServer string = containerRegistry.outputs.loginServer
 output resourceGroup string = resourceGroup().name
 output sqlServerEndpoint string = sqlDb.outputs.endpoint
 output sqlDatabaseName string = sqlDb.outputs.databaseName
+output GITHUB_REPO_TOKEN string = githubToken
+output AZURE_RESOURCE_GHRUNNER_NAME string = ghRunner.outputs.name
+output GITHUB_RUNNER_RESULT object = ghRunnerScriptExtension.outputs.ghRunnnerExtensionResult
+// .instanceView.value

@@ -65,6 +65,10 @@ else
   #    //         "value": "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
   #
 
+  echo "${GITHUB_PAT}" | gh auth login --with-token  
+  GITHUB_REPO_TOKEN=$(gh api -X POST /repos/jmservera/private-webapp/actions/runners/registration-token -q .token)
+  echo "We got a token: ${GITHUB_REPO_TOKEN}"
+
   echo "Configuring the self-hosted runner with user ${USER}..."
   ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_REPO_TOKEN}" --labels  self-hosted --unattended
   echo "Runner configured successfully!"
@@ -78,3 +82,4 @@ fi
 _
 
 echo "Self-hosted runner installation completed successfully!"
+echo "#DATA ${GITHUB_REPO_TOKEN} #DATA"

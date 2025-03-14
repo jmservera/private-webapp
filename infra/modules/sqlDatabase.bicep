@@ -18,7 +18,15 @@ param storageSubnetId string
 param vnetId string
 param clientIpAddress string
 
-resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
+@description('Set to false to make the critical resources public. Use this only for testing.')
+param private bool = true
+
+param sku object = {
+  name: 'Standard'
+  tier: 'Standard'
+}
+
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   name: serverName
   location: location
   properties: {
@@ -30,21 +38,34 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
       azureADOnlyAuthentication: false
       principalType: 'Application'
       sid: deploymentIdentityClientId
-      tenantId: subscription().tenantId
+      tenantId: subscription().tenantId      
     }
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: private? 'Disabled': 'Enabled'
     minimalTlsVersion: '1.2'
+
   }
 
   resource database 'databases' = {
     name: databaseName
     location: location
-    sku: {
-      name: 'Standard'
-      tier: 'Standard'
+    sku: sku  
+  } 
+  resource firewallRulesAzure 'firewallRules' = if(!private) {
+    name: 'AllowAllWindowsAzureIps'
+    properties: {
+      startIpAddress: '0.0.0.0'
+      endIpAddress: '0.0.0.0'
+    }
+  }
+  resource firewallRulesClient 'firewallRules' = if(!private) {
+    name: 'AllowClientIp'
+    properties: {
+      startIpAddress: clientIpAddress
+      endIpAddress: clientIpAddress
     }
   }
 }
+
 
 resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: substring(replace('${databaseName}deploymentstorage', '-', ''), 0, 24)
@@ -106,7 +127,7 @@ resource deploymentMI 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // create private endpoints for the storage account
-module storagePrivateEndpoint 'privateEndpoint.bicep' = {
+module storagePrivateEndpoint 'privateEndpoint.bicep' = if(private) {
   name: '${databaseName}-deployment-storage-pe'
   params: {
     location: location
@@ -119,7 +140,7 @@ module storagePrivateEndpoint 'privateEndpoint.bicep' = {
 }
 
 // create private endpoints for the SQL Server
-module dbPrivateEndpoint 'privateEndpoint.bicep' = {
+module dbPrivateEndpoint 'privateEndpoint.bicep' = if(private) {
   name: '${databaseName}-sql-server-pe'
   params: {
     location: location
@@ -141,10 +162,10 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
       '${deploymentIdentityResourceId}': {}
     }
   }
-  dependsOn: [
+  dependsOn: private? [
     dbPrivateEndpoint
     storagePrivateEndpoint
-  ]
+  ]:[]
   properties: {
     azCliVersion: '2.37.0'
     retentionInterval: 'PT1H' // Retain the script resource for 1 hour after it ends running

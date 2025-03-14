@@ -21,10 +21,13 @@ param sqlAdminPassword string
 @secure()
 param adminPassword string
 
-@secure()
 param githubToken string
 @secure()
 param githubPAT string
+
+@description('Set to false to make the critical resources public. Use this only for testing.')
+param private bool = true
+
 
 // Tags that should be applied to all resources.
 // 
@@ -57,8 +60,12 @@ module resources './resources.bicep' = {
     adminPassword: adminPassword
     githubPAT: githubPAT
     clientIpAddress: clientIpAddress
+    private: private
   }
 }
 
 output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
 output RESOURCE_GROUP string = rg.name
+output GITHUB_REPO_TOKEN string = resources.outputs.GITHUB_REPO_TOKEN
+output AZURE_RESOURCE_GHRUNNER_NAME string = resources.outputs.AZURE_RESOURCE_GHRUNNER_NAME
+output GITHUB_RUNNER_RESULT object = resources.outputs.GITHUB_RUNNER_RESULT

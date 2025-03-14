@@ -25,6 +25,9 @@
     },
     "clientIpAddress": {
       "value": "${CLIENT_IP_ADDRESS}"
+    },
+    "private": {
+      "value": "${PRIVATE}"
     }
   }
 }

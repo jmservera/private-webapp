@@ -37,7 +37,7 @@ ALTER ROLE db_ddladmin ADD MEMBER [${APPIDENTITYNAME}];
 go
 -- alter role db_owner add member [${APPIDENTITYNAME}]
 -- go
-IF object_id('${TABLENAME}', 'U') is not null
+IF object_id('${TABLENAME}', 'U') is null
     create table ${TABLENAME} ([key] nvarchar(50) PRIMARY KEY, [stored_value] nvarchar(255));
 go
 SCRIPT_END
