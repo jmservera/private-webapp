@@ -57,10 +57,13 @@ if [ ! -d "/home/$USER/.ssh" ]; then
   chmod 700 /home/$USER/.ssh
 fi
 
+pwd
+cd ~
 
 $RUNAS bash<<_
 set -e
-echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}..."
+pwd
+echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}... for user ${USER}"
 # Create a folder
 if [ -f ".env" ]; then
   echo "Sourcing .env file..."
