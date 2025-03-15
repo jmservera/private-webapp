@@ -49,7 +49,7 @@ curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Print completion message
 echo "Package installation completed successfully!"
-RUNAS="sudo -iu $USER"
+RUNAS="sudo -Eu $USER"
 
 # create folder if not exist
 if [ ! -d "/home/$USER/.ssh" ]; then
@@ -60,7 +60,7 @@ fi
 
 $RUNAS bash<<_
 set -e
-echo "Installing the self-hosted runner..."
+echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}..."
 # Create a folder
 if [ -f ".env" ]; then
   echo "Sourcing .env file..."
@@ -85,7 +85,7 @@ else
   # login to GitHub
   echo "${GITHUB_PAT}" | gh auth login --with-token  
   # get the runner token
-  GITHUB_RUNNER_TOKEN=$(gh api -X POST /repos/jmservera/private-webapp/actions/runners/registration-token -q .token)
+  GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
   echo "We got a token: ${GITHUB_RUNNER_TOKEN}"
 
   echo "Configuring the self-hosted runner with user ${USER}..."
