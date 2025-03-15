@@ -19,7 +19,7 @@ hooks:
       AZURE_RESOURCE_GHRUNNER_NAME=$(azd env get-value "AZURE_RESOURCE_GHRUNNER_NAME")
       RESOURCE_GROUP=$(azd env get-value "RESOURCE_GROUP")
       echo "Cleaning up gh runner..."
-      az vm run-command invoke  --command-id CleanUpRunner --name "${AZURE_RESOURCE_GHRUNNER_NAME}" -g "${RESOURCE_GROUP}" --scripts @scripts/uninstall-action-runner.sh
+      az vm run-command invoke  --command-id RunShellScript --name "${AZURE_RESOURCE_GHRUNNER_NAME}" -g "${RESOURCE_GROUP}" --scripts @scripts/uninstall-action-runner.sh
       echo "Done"
     interactive: true
 # predeploy:
