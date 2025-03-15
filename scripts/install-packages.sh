@@ -21,6 +21,7 @@ apt-get install -y \
   libicu70 \
   libssl3
 
+# Install Docker
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
@@ -30,14 +31,21 @@ echo \
   $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update
-
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# Add user to docker group
+gpasswd -a $USER docker
+
+# Install GitHub CLI if not already installed
+if ! command -v gh &> /dev/null; then
+  echo "Installing GitHub CLI..."
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+  sudo apt update
+  sudo apt install gh -y
+fi
 
 # Install Azure CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-
-# Add user to docker group
-gpasswd -a $USER docker
 
 # Print completion message
 echo "Package installation completed successfully!"

@@ -21,7 +21,6 @@ param sqlAdminPassword string
 @secure()
 param adminPassword string
 
-param githubToken string
 @secure()
 param githubPAT string
 
@@ -56,7 +55,6 @@ module resources './resources.bicep' = {
     repo_name: repo_name
     repo_owner: repo_owner
     publicKey: publicKey
-    githubToken: githubToken
     adminPassword: adminPassword
     githubPAT: githubPAT
     clientIpAddress: clientIpAddress
@@ -66,6 +64,5 @@ module resources './resources.bicep' = {
 
 output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
 output RESOURCE_GROUP string = rg.name
-output GITHUB_REPO_TOKEN string = resources.outputs.GITHUB_REPO_TOKEN
 output AZURE_RESOURCE_GHRUNNER_NAME string = resources.outputs.AZURE_RESOURCE_GHRUNNER_NAME
 output GITHUB_RUNNER_RESULT object = resources.outputs.GITHUB_RUNNER_RESULT

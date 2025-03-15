@@ -20,8 +20,6 @@ param publicKey string
 param repo_name string
 param repo_owner string
 @secure()
-param githubToken string
-@secure()
 param githubPAT string
 @description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
 param clientIpAddress string
@@ -280,17 +278,6 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
         path: '/home/localAdminUser/.ssh/authorized_keys'
       }
     ]
-    // extensionCustomScriptConfig: {
-    //   enabled: true
-    //   fileData: [
-    //     {
-    //       uri: 'https://raw.githubusercontent.com/jmservera/private-webapp/refs/heads/main/scripts/install-packages.sh'
-    //     }
-    //   ]
-    // }
-    // extensionCustomScriptProtectedSetting: {
-    //   commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT=${githubPAT} GITHUB_REPO_TOKEN=${githubToken} bash install-packages.sh'
-    // }
   }
 }
 
