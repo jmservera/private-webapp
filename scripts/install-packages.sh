@@ -47,9 +47,7 @@ fi
 # Install Azure CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-# Print completion message
-echo "Package installation completed successfully!"
-RUNAS="sudo -Eu $USER"
+
 
 # create folder if not exist
 if [ ! -d "/home/$USER/.ssh" ]; then
@@ -57,13 +55,14 @@ if [ ! -d "/home/$USER/.ssh" ]; then
   chmod 700 /home/$USER/.ssh
 fi
 
-pwd
-cd ~
+echo "Package installation completed successfully!"
+RUNAS="sudo -Eu $USER"
 
 $RUNAS bash<<_
 set -e
-pwd
 echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}... for user ${USER}"
+cd ~
+pwd
 # Create a folder
 if [ -f ".env" ]; then
   echo "Sourcing .env file..."
