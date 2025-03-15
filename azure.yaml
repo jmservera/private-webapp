@@ -12,17 +12,16 @@ hooks:
   postup:
     run: ./scripts/set-github-vars.sh
     interactive: true
-  # predown:
-  #   shell: sh
-  #   run: |
-  #     echo "Loading azd .env file from current environment"
-  #     AZURE_RESOURCE_GHRUNNER_NAME=$(azd env get-value "AZURE_RESOURCE_GHRUNNER_NAME")
-  #     RESOURCE_GROUP=$(azd env get-value "RESOURCE_GROUP")
-  #     GITHUB_REPO_TOKEN=$(azd env get-value "GITHUB_REPO_TOKEN")
-  #     echo "Cleaning up gh runner..."
-  #     az vm run-command invoke  --command-id CleanUpRunner --name "${AZURE_RESOURCE_GHRUNNER_NAME}" -g "${RESOURCE_GROUP}" --scripts @scripts/uninstall-action-runner.sh --parameters GITHUB_REPO_TOKEN="${GITHUB_REPO_TOKEN}"
-  #     echo "Done"
-  #   interactive: true
+  predown:
+    shell: sh
+    run: |
+      echo "Loading azd .env file from current environment"
+      AZURE_RESOURCE_GHRUNNER_NAME=$(azd env get-value "AZURE_RESOURCE_GHRUNNER_NAME")
+      RESOURCE_GROUP=$(azd env get-value "RESOURCE_GROUP")
+      echo "Cleaning up gh runner..."
+      az vm run-command invoke  --command-id CleanUpRunner --name "${AZURE_RESOURCE_GHRUNNER_NAME}" -g "${RESOURCE_GROUP}" --scripts @scripts/uninstall-action-runner.sh
+      echo "Done"
+    interactive: true
 # predeploy:
 #   run: ./scripts/predeploy.sh
 #   interactive: true

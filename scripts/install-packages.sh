@@ -43,15 +43,30 @@ gpasswd -a $USER docker
 echo "Package installation completed successfully!"
 RUNAS="sudo -iu $USER"
 
+# create folder if not exist
+if [ ! -d "/home/$USER/.ssh" ]; then
+  mkdir -p /home/$USER/.ssh
+  chmod 700 /home/$USER/.ssh
+fi
+
+
 $RUNAS bash<<_
 set -e
 echo "Installing the self-hosted runner..."
 # Create a folder
-if [ -d "actions-runner" ]; then
-  echo "actions-runner already exist, installer not needed."
-  exit 0
+if [ -f ".env" ]; then
+  echo "Sourcing .env file..."
+  set -a
+  source .env
+  set +a  
 else
-  mkdir actions-runner && cd actions-runner
+  echo ".env file not found, install..."
+  if [ ! -d "actions-runner" ]; then
+    mkdir actions-runner
+  fi
+
+  cd actions-runner
+
   # Download the latest runner package
   curl -O -L https://github.com/actions/runner/releases/download/v2.320.1/actions-runner-linux-x64-2.320.1.tar.gz
   # Extract the installer
@@ -59,18 +74,14 @@ else
 
   echo "Runner package extracted successfully!"
 
-  #
-  #    Review how to get the runner PAT from the GitHub pat using the reg token
-  #    //         "name": "REGISTRATION_TOKEN_API_URL",
-  #    //         "value": "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
-  #
-
+  # login to GitHub
   echo "${GITHUB_PAT}" | gh auth login --with-token  
-  GITHUB_REPO_TOKEN=$(gh api -X POST /repos/jmservera/private-webapp/actions/runners/registration-token -q .token)
-  echo "We got a token: ${GITHUB_REPO_TOKEN}"
+  # get the runner token
+  GITHUB_RUNNER_TOKEN=$(gh api -X POST /repos/jmservera/private-webapp/actions/runners/registration-token -q .token)
+  echo "We got a token: ${GITHUB_RUNNER_TOKEN}"
 
   echo "Configuring the self-hosted runner with user ${USER}..."
-  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_REPO_TOKEN}" --labels  self-hosted --unattended
+  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_RUNNER_TOKEN}" --labels  self-hosted --unattended
   echo "Runner configured successfully!"
   echo "Installing the self-hosted runner as a service..."
   sudo ./svc.sh install
@@ -78,8 +89,19 @@ else
   echo "Starting the self-hosted runner service..."
   sudo ./svc.sh start
   echo "Runner service started successfully!"
+  echo "GITHUB_RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}" > ~/.env
+  cd ~
 fi
 _
 
-echo "Self-hosted runner installation completed successfully!"
-echo "#DATA ${GITHUB_REPO_TOKEN} #DATA"
+if [ -f ".env" ]; then
+  echo "Sourcing .env file..."
+  set -a
+  source .env
+  set +a  
+
+  echo "Self-hosted runner installation completed successfully!"
+  echo "#DATA ${GITHUB_RUNNER_TOKEN} #DATA"
+else
+  echo ".env file not found, installer may have failed..."
+fi

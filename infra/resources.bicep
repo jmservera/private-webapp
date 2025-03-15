@@ -322,7 +322,6 @@ output acrLoginServer string = containerRegistry.outputs.loginServer
 output resourceGroup string = resourceGroup().name
 output sqlServerEndpoint string = sqlDb.outputs.endpoint
 output sqlDatabaseName string = sqlDb.outputs.databaseName
-output GITHUB_REPO_TOKEN string = githubToken
 output AZURE_RESOURCE_GHRUNNER_NAME string = ghRunner.outputs.name
 output GITHUB_RUNNER_RESULT object = ghRunnerScriptExtension.outputs.ghRunnnerExtensionResult
 // .instanceView.value
