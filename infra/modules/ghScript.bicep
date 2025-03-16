@@ -5,6 +5,7 @@ param repo_owner string
 param githubPAT string
 param adminUserName string
 param identityClientId string
+param branch string = 'main'
 
 resource ghRunnerScriptExtension 'Microsoft.Compute/virtualMachines/extensions@2024-07-01' = {
   name: '${ghRunnerName}/ghRunnerScriptExtension'
@@ -14,14 +15,18 @@ resource ghRunnerScriptExtension 'Microsoft.Compute/virtualMachines/extensions@2
     publisher: 'Microsoft.Azure.Extensions'
     type: 'CustomScript'
     typeHandlerVersion: '2.0'
-    settings: {   
-      //https://raw.githubusercontent.com/jmservera/private-webapp/refs/heads/jmservera/bicep-cleanup/scripts/install-packages.sh
-      fileUris: [uri('https://raw.githubusercontent.com','jmservera/private-webapp/refs/heads/jmservera/bicep-cleanup/scripts/install-packages.sh')]
+    settings: {
+      fileUris: [
+        uri(
+          'https://raw.githubusercontent.com',
+          '${repo_owner}/${repo_name}/refs/heads/${branch}/scripts/install-packages.sh'
+        )
+      ]
     }
-    protectedSettings:{
-        commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT="${githubPAT}" bash install-packages.sh'
-        managedIdentity: { clientId: identityClientId }
-      }
+    protectedSettings: {
+      commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT="${githubPAT}" bash install-packages.sh'
+      managedIdentity: { clientId: identityClientId }
+    }
   }
 }
 

@@ -47,8 +47,6 @@ fi
 # Install Azure CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-
-
 # create folder if not exist
 if [ ! -d "/home/$USER/.ssh" ]; then
   mkdir -p /home/$USER/.ssh
@@ -56,8 +54,8 @@ if [ ! -d "/home/$USER/.ssh" ]; then
 fi
 
 echo "Package installation completed successfully!"
-RUNAS="sudo -iu $USER"
 
+echo "GitHub Login"
 # login to GitHub
 echo "${GITHUB_PAT}" | gh auth login --with-token  
 # get the runner token
@@ -66,13 +64,9 @@ export GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/a
 # Keep in mind that all the bash variables are replaced before running the script
 # as the script is generated in-place, replacing all the variables before sending it
 # to bash. If you need to use any variable that is assigned in the script, escape the $ sign.
-$RUNAS bash<<_
+sudo -iu $USER bash<<_
 set -e
 echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}... for user ${USER}"
-pwd
-cd ~
-pwd
-# Create a folder
 if [ -f ".env" ]; then
   echo "runner already installed"
   cat .env
