@@ -92,7 +92,7 @@ else
   echo "Runner package extracted successfully!"
 
   echo "Configuring the self-hosted runner with user ${USER}..."
-  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_RUNNER_TOKEN}" --labels  self-hosted --unattended
+  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_RUNNER_TOKEN}" --labels  self-hosted --unattended --replace
   echo "Runner configured successfully!"
   echo "Installing the self-hosted runner as a service..."
   sudo ./svc.sh install
