@@ -89,7 +89,7 @@ else
   echo "${GITHUB_PAT}" | gh auth login --with-token  
   # get the runner token
   gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
-  GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
+  export GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
   echo "We got a token: ${GITHUB_RUNNER_TOKEN}"
 
   echo "Configuring the self-hosted runner with user ${USER}..."
