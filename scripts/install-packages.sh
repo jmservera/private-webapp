@@ -56,19 +56,26 @@ if [ ! -d "/home/$USER/.ssh" ]; then
 fi
 
 echo "Package installation completed successfully!"
-RUNAS="sudo -Eu $USER"
+RUNAS="sudo -iu $USER"
 
+# login to GitHub
+echo "${GITHUB_PAT}" | gh auth login --with-token  
+# get the runner token
+export GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
+
+# Keep in mind that all the bash variables are replaced before running the script
+# as the script is generated in-place, replacing all the variables before sending it
+# to bash. If you need to use any variable that is assigned in the script, escape the $ sign.
 $RUNAS bash<<_
 set -e
 echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}... for user ${USER}"
+pwd
 cd ~
 pwd
 # Create a folder
 if [ -f ".env" ]; then
-  echo "Sourcing .env file..."
-  set -a
-  source .env
-  set +a  
+  echo "runner already installed"
+  cat .env
 else
   echo ".env file not found, install..."
   if [ ! -d "actions-runner" ]; then
@@ -83,14 +90,6 @@ else
   tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
   echo "Runner package extracted successfully!"
-  echo "Logging in with ${GITHUB_PAT}"
-
-  # login to GitHub
-  echo "${GITHUB_PAT}" | gh auth login --with-token  
-  # get the runner token
-  gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
-  export GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
-  echo "We got a token: ${GITHUB_RUNNER_TOKEN}"
 
   echo "Configuring the self-hosted runner with user ${USER}..."
   ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_RUNNER_TOKEN}" --labels  self-hosted --unattended
@@ -102,16 +101,17 @@ else
   sudo ./svc.sh start
   echo "Runner service started successfully!"
   echo "GITHUB_RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}" > ~/.env
-  cd ~
 fi
 _
+
+cd /home/$USER
 
 if [ -f ".env" ]; then
   echo "Sourcing .env file..."
   set -a
   source .env
   set +a  
-
+  cat .env
   echo "Self-hosted runner installation completed successfully!"
   echo "#DATA ${GITHUB_RUNNER_TOKEN} #DATA"
 else
