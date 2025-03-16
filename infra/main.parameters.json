@@ -17,14 +17,14 @@
     "githubPAT": {
       "value": "${GITHUB_PAT}"
     },
-    "githubToken": {
-      "value": "${GITHUB_REPO_TOKEN}"
-    },
     "publicKey": {
       "value": "${PUBLIC_KEY}"
     },
     "clientIpAddress": {
       "value": "${CLIENT_IP_ADDRESS}"
+    },
+    "private": {
+      "value": "${PRIVATE}"
     }
   }
 }
