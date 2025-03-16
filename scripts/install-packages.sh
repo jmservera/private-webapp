@@ -83,10 +83,12 @@ else
   tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
   echo "Runner package extracted successfully!"
+  echo "Logging in with ${GITHUB_PAT}"
 
   # login to GitHub
   echo "${GITHUB_PAT}" | gh auth login --with-token  
   # get the runner token
+  gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token"
   GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
   echo "We got a token: ${GITHUB_RUNNER_TOKEN}"
 
