@@ -2,6 +2,29 @@ from flask import Flask, request, jsonify, render_template_string
 import requests
 import os
 import re
+from dotenv import load_dotenv
+
+import logging
+# Import the `configure_azure_monitor()` function from the
+# `azure.monitor.opentelemetry` package.
+from azure.monitor.opentelemetry import configure_azure_monitor
+
+load_dotenv()
+
+LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
+    # Configure OpenTelemetry to use Azure Monitor with the 
+    # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable.
+    configure_azure_monitor(
+        logger_name="app.frontend",  # Set the namespace for the logger in which you would like to collect telemetry for if you are collecting logging telemetry. This is imperative so you do not collect logging telemetry from the SDK itself.
+    )
+
+logger = logging.getLogger("app.frontend")  # Logging telemetry will be collected from logging calls made with this logger and all of its children loggers.
+logger.setLevel(LEVEL)
+
+if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
+    logger.warning("APPLICATIONINSIGHTS_CONNECTION_STRING not found in environment variables.")
 
 backend = os.getenv("BACKEND", "http://localhost:8080")
 PORT = os.getenv("PORT", 80)

@@ -27,6 +27,8 @@ param clientIpAddress string
 @description('Set to false to make the critical resources public. Use this only for testing.')
 param private bool = true
 
+param ValuesTableName string = 'Value_Store'
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
@@ -55,6 +57,14 @@ module frontEndApp './modules/webApp.bicep' = {
         name: 'BACKEND'
         value: backEndApp.outputs.url
       }
+      {
+        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        value: monitoring.outputs.applicationInsightsInstrumentationKey
+      }
+      {
+        name: 'APPINSIGHTS_CONNECTION_STRING'
+        value: monitoring.outputs.applicationInsightsConnectionString
+      }
     ]
   }
 }
@@ -81,11 +91,19 @@ module backEndApp './modules/webApp.bicep' = {
     appSettings: [
       {
         name: 'TableName'
-        value: 'Value_Store'
+        value: ValuesTableName
       }
       {
         name: 'ConnectionString'
         value: 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;Authentication=ActiveDirectoryMsi;'
+      }
+      {
+        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        value: monitoring.outputs.applicationInsightsInstrumentationKey
+      }
+      {
+        name: 'APPINSIGHTS_CONNECTION_STRING'
+        value: monitoring.outputs.applicationInsightsConnectionString
       }
     ]
     identityId: backendAppIdentity.outputs.resourceId
@@ -175,7 +193,7 @@ module backendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assig
 }
 
 // Private endpoint for backend
-module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = if(private) {
+module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = if (private) {
   name: 'backEndPrivateEndpoint'
   params: {
     name: '${namePrefix}-backend'
@@ -293,7 +311,6 @@ module ghRunnerScriptExtension './modules/ghScript.bicep' = {
     identityClientId: ghRunnerAppIdentity.outputs.clientId
   }
 }
-
 
 // Output important values
 output frontendUrl string = frontEndApp.outputs.url

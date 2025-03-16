@@ -28,10 +28,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py .
 COPY startup.sh .
 
-# Expose the port the app runs on
-EXPOSE 8080
 ENV ConnectionString ""
-ENV TableName ""
+ENV TableName "Value_Store"
+ENV PORT 8080
+ENV LOG_LEVEL INFO
+# Expose the port the app runs on
+EXPOSE ${PORT}
 
 # Run the application
 CMD ["sh", "startup.sh"]
