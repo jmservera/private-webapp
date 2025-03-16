@@ -19,7 +19,7 @@ resource ghRunnerScriptExtension 'Microsoft.Compute/virtualMachines/extensions@2
       fileUris: [uri('https://raw.githubusercontent.com','jmservera/private-webapp/refs/heads/jmservera/bicep-cleanup/scripts/install-packages.sh')]
     }
     protectedSettings:{
-        commandToExecute: 'REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT="${githubPAT}" bash install-packages.sh'
+        commandToExecute: 'USER=${adminUserName} REPO_OWNER=${repo_owner} REPO_NAME=${repo_name} GITHUB_PAT="${githubPAT}" bash install-packages.sh'
         managedIdentity: { clientId: identityClientId }
       }
   }
