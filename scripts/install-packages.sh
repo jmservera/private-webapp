@@ -100,7 +100,7 @@ else
   echo "Starting the self-hosted runner service..."
   sudo ./svc.sh start
   echo "Runner service started successfully!"
-  echo "GITHUB_RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}" > ~/.env
+  echo "GITHUB_RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN}" > ~/.env
 fi
 _
 
