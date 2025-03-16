@@ -20,7 +20,7 @@ if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
         logger_name="app.frontend",  # Set the namespace for the logger in which you would like to collect telemetry for if you are collecting logging telemetry. This is imperative so you do not collect logging telemetry from the SDK itself.
     )
 
-logger = logging.getLogger("app.frontend")  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
+logger = logging.getLogger("app.frontend")  # Logging telemetry will be collected from logging calls made with this logger and all of its children loggers.
 logger.setLevel(LEVEL)
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
