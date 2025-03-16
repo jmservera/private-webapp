@@ -1,21 +1,38 @@
 from flask import Flask, request, jsonify
 import pyodbc
 import os
-import logging
 from dotenv import load_dotenv
+
+import logging
+# Import the `configure_azure_monitor()` function from the
+# `azure.monitor.opentelemetry` package.
+from azure.monitor.opentelemetry import configure_azure_monitor
 
 load_dotenv()
 
-logging.basicConfig()
-logging.getLogger().setLevel(logging.INFO)
+LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
+    # Configure OpenTelemetry to use Azure Monitor with the 
+    # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable.
+    configure_azure_monitor(
+        logger_name="app.backend",  # Set the namespace for the logger in which you would like to collect telemetry for if you are collecting logging telemetry. This is imperative so you do not collect logging telemetry from the SDK itself.
+    )
+
+logger = logging.getLogger("app.backend")  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
+logger.setLevel(LEVEL)
+
+if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
+    logger.warning("APPLICATIONINSIGHTS_CONNECTION_STRING not found in environment variables.")
 
 app = Flask(__name__)
 
-
-
 logging.info("Reading environment variables")
-table_name = os.environ["TableName"]
+table_name = os.getenv("TableName", "Value_Store")
+if table_name is None or table_name == "":
+    raise ValueError("TableName environment variable not set")
 conn_str = os.environ["ConnectionString"]
+PORT=int(os.getenv("PORT", 8080))
 conn = None
 
 def getConnection()->pyodbc.Connection:
@@ -24,10 +41,10 @@ def getConnection()->pyodbc.Connection:
 
     try:
         if conn is None:
-            logging.info("Connecting to database")
+            logger.info("Connecting to database")
             conn = pyodbc.connect(conn_str)        
     except pyodbc.Error as e:
-        logging.error("Error connecting to database: %s \n\t %s", conn_str, e)
+        logger.error("Error connecting to database: %s \n\t %s", conn_str, e)
 
     return conn
 
@@ -39,7 +56,7 @@ def health():
     try:
         conn = getConnection()
         info=conn.getinfo(pyodbc.SQL_DBMS_NAME)
-        logging.info("DBMS Name: %s",info)
+        logger.info("DBMS Name: %s",info)
     except pyodbc.Error:
         return jsonify({"message": "Unhealthy"}), 500
 
@@ -47,11 +64,11 @@ def health():
 
 @app.route('/set', methods=['POST'])
 def create_value():
-    logging.info("Value %s",request.json)
+    logger.info("Value %s",request.json)
     key = request.json.get('key')
     value = request.json.get('value')
     query=f"INSERT INTO {table_name}([key], [stored_value]) VALUES (?, ?)"
-    logging.info("Query %s",query)
+    logger.info("Query %s",query)
     conn = getConnection()
     conn.execute(query, key, value)
     conn.commit()
@@ -78,4 +95,4 @@ def get_value(key):
         return jsonify({"message": "Key not found"}), 404
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=PORT)

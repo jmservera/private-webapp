@@ -12,9 +12,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code into the container
 COPY *.py .
+COPY startup.sh .
 
 # Expose the port the app runs on
-EXPOSE 80
+ENV PORT 80
+ENV BACKEND http://localhost:8080
+ENV LOG_LEVEL INFO
+EXPOSE ${PORT}
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "app:app"]
+CMD ["sh", "startup.sh"]

@@ -1,0 +1,37 @@
+services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ./Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - BACKEND=http://backend:8080
+    depends_on:
+      - backend
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ./Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionString=Driver={ODBC Driver 18 for SQL Server};Server=tcp:db,1433;Database=master;UID=sa;PWD=Password123;Encrypt=yes;TrustServerCertificate=yes;Connection Timeout=30;
+      - PORT=8080
+    depends_on:
+      - db
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Password123
+    volumes:
+      - db_data:/var/opt/mssql
+    post_start:
+      - command: /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "Password123" -Q "CREATE TABLE [Value_Store] ([key] nvarchar(50) PRIMARY KEY, [stored_value] nvarchar(255));"
+
+volumes:
+  db_data:
