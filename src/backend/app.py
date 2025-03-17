@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import pyodbc
 import os
 from dotenv import load_dotenv
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 import logging
 # Import the `configure_azure_monitor()` function from the
@@ -35,6 +36,8 @@ PORT=int(os.getenv("PORT", 8080))
 conn = None
 
 app = Flask(APP_NAME)
+
+FlaskInstrumentor().instrument_app(app)
 
 def getConnection()->pyodbc.Connection:
     global conn

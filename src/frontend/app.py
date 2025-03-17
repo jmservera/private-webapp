@@ -8,6 +8,8 @@ import logging
 # Import the `configure_azure_monitor()` function from the
 # `azure.monitor.opentelemetry` package.
 from azure.monitor.opentelemetry import configure_azure_monitor
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+
 
 load_dotenv()
 
@@ -31,6 +33,7 @@ backend = os.getenv("BACKEND", "http://localhost:8080")
 PORT = os.getenv("PORT", 80)
 
 app = Flask(APP_NAME)
+FlaskInstrumentor().instrument_app(app)
 
 @app.route('/')
 def index():
