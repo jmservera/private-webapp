@@ -41,8 +41,12 @@ def getConnection()->pyodbc.Connection:
     global conn_str
 
     if conn is None:
-        logger.info("Connecting to database")
-        conn = pyodbc.connect(conn_str)        
+        try:
+            logger.info("Connecting to database")
+            conn = pyodbc.connect(conn_str)
+        except pyodbc.Error as e:
+            logger.error("Error connecting to database", exc_info=True)
+            raise e
 
     return conn
 
