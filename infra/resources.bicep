@@ -58,11 +58,11 @@ module frontEndApp './modules/webApp.bicep' = {
         value: backEndApp.outputs.url
       }
       {
-        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        name: 'APPLICATIONINSIGHTS_INSTRUMENTATIONKEY'
         value: monitoring.outputs.applicationInsightsInstrumentationKey
       }
       {
-        name: 'APPINSIGHTS_CONNECTION_STRING'
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: monitoring.outputs.applicationInsightsConnectionString
       }
     ]
@@ -98,11 +98,11 @@ module backEndApp './modules/webApp.bicep' = {
         value: 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;Authentication=ActiveDirectoryMsi;'
       }
       {
-        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        name: 'APPLICATIONINSIGHTS_INSTRUMENTATIONKEY'
         value: monitoring.outputs.applicationInsightsInstrumentationKey
       }
       {
-        name: 'APPINSIGHTS_CONNECTION_STRING'
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: monitoring.outputs.applicationInsightsConnectionString
       }
     ]

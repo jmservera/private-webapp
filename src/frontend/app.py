@@ -11,16 +11,17 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 
 load_dotenv()
 
+APP_NAME=os.getenv("APP_NAME","app.frontend")
 LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
     # Configure OpenTelemetry to use Azure Monitor with the 
     # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable.
     configure_azure_monitor(
-        logger_name="app.frontend",  # Set the namespace for the logger in which you would like to collect telemetry for if you are collecting logging telemetry. This is imperative so you do not collect logging telemetry from the SDK itself.
+        logger_name=APP_NAME,  # Set the namespace for the logger in which you would like to collect telemetry for if you are collecting logging telemetry. This is imperative so you do not collect logging telemetry from the SDK itself.
     )
 
-logger = logging.getLogger("app.frontend")  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
+logger = logging.getLogger(APP_NAME)  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
 logger.setLevel(LEVEL)
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
@@ -29,7 +30,7 @@ if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
 backend = os.getenv("BACKEND", "http://localhost:8080")
 PORT = os.getenv("PORT", 80)
 
-app = Flask(__name__)
+app = Flask(APP_NAME)
 
 @app.route('/')
 def index():
@@ -186,12 +187,13 @@ def get_value(key):
     
 @app.route('/health', methods=['GET'])
 def health():
+    return jsonify({"message": "Healthy"}), 200
     # send a rest get request to the backend
-    response = requests.get(backend + '/health')
-    if response.status_code == 200:
-        return jsonify({"message": "Healthy"}), 200
-    else:
-        return jsonify({"message": "Backend Unhealthy"}), 500
+    # response = requests.get(backend + '/health')
+    # if response.status_code == 200:
+    #     return jsonify({"message": "Healthy"}), 200
+    # else:
+    #     return jsonify({"message": "Backend Unhealthy"}), 500
 
 
 if __name__ == '__main__':

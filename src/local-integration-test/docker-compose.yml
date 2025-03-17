@@ -8,6 +8,9 @@ services:
     environment:
       - PORT=3000
       - BACKEND=http://backend:8080
+      - APP_NAME=app.frontend.debug
+    env_file:
+      - .env
     depends_on:
       - backend
   backend:
@@ -19,6 +22,9 @@ services:
     environment:
       - ConnectionString=Driver={ODBC Driver 18 for SQL Server};Server=tcp:db,1433;Database=master;UID=sa;PWD=Password123;Encrypt=yes;TrustServerCertificate=yes;Connection Timeout=30;
       - PORT=8080
+      - APP_NAME=app.backend.debug
+    env_file:
+      - .env
     depends_on:
       - db
   db:
