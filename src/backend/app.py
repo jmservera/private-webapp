@@ -39,7 +39,7 @@ conn = None
 app = Flask(APP_NAME)
 
 FlaskInstrumentor().instrument_app(app)
-trace_integration(pyodbc, "connect", "odbc")
+trace_integration(pyodbc, "Connection", "odbc")
 
 def getConnection()->pyodbc.Connection:
     global conn
