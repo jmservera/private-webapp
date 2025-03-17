@@ -51,6 +51,10 @@ def getConnection()->pyodbc.Connection:
 
 _ = getConnection()
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    return jsonify({"message": "pong"}), 200
+
 @app.route('/health', methods=['GET'])
 def health():
     # check if the redis server is healthy

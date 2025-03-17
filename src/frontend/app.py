@@ -187,13 +187,14 @@ def get_value(key):
     
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"message": "Healthy"}), 200
+    response = requests.get(backend + '/ping')
+    if response.status_code == 200:
+        return jsonify({"message": "Healthy"}), 200
+    else:
+        return jsonify({"message": "Backend Unhealthy"}), 500
+
     # send a rest get request to the backend
     # response = requests.get(backend + '/health')
-    # if response.status_code == 200:
-    #     return jsonify({"message": "Healthy"}), 200
-    # else:
-    #     return jsonify({"message": "Backend Unhealthy"}), 500
 
 
 if __name__ == '__main__':
