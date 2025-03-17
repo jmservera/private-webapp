@@ -6,7 +6,7 @@ from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.dbapi import trace_integration, instrument_connection
 from opentelemetry import trace
 
-import logging
+from logging import getLogger
 # Import the `configure_azure_monitor()` function from the
 # `azure.monitor.opentelemetry` package.
 from azure.monitor.opentelemetry import configure_azure_monitor
@@ -26,14 +26,14 @@ if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
         enable_live_metrics=True
     )
 
-logger = logging.getLogger(APP_NAME)  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
+logger = getLogger(APP_NAME)  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
 logger.setLevel(LEVEL)
 tracer=trace.get_tracer(APP_NAME)
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
     logger.warning("APPLICATIONINSIGHTS_CONNECTION_STRING not found in environment variables.")
 
-logging.info("Reading environment variables")
+logger.info("Reading environment variables")
 table_name = os.getenv("TableName", "Value_Store")
 if table_name is None or table_name == "":
     raise ValueError("TableName environment variable not set")
