@@ -40,16 +40,11 @@ def getConnection()->pyodbc.Connection:
     global conn
     global conn_str
 
-    try:
-        if conn is None:
-            logger.info("Connecting to database")
-            conn = pyodbc.connect(conn_str)        
-    except pyodbc.Error as e:
-        logger.error("Error connecting to database: %s \n\t %s", conn_str, e)
+    if conn is None:
+        logger.info("Connecting to database")
+        conn = pyodbc.connect(conn_str)        
 
     return conn
-
-_ = getConnection()
 
 @app.route('/ping', methods=['GET'])
 def ping():
