@@ -9,6 +9,7 @@ import logging
 # `azure.monitor.opentelemetry` package.
 from azure.monitor.opentelemetry import configure_azure_monitor
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry import trace
 
 
 load_dotenv()
@@ -25,6 +26,7 @@ if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
 
 logger = logging.getLogger(APP_NAME)  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
 logger.setLevel(LEVEL)
+tracer=trace.get_tracer(APP_NAME)
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
     logger.warning("APPLICATIONINSIGHTS_CONNECTION_STRING not found in environment variables.")
@@ -152,41 +154,43 @@ def index():
 
 @app.route('/set', methods=['POST'])
 def set_value():
-    # send a rest post request to the backend
-    r=requests.post(backend + '/set', json=request.json)
-    return r.json(), r.status_code # jsonify({"message": "Value set successfully"}), 200
+    with tracer.start_as_current_span("set_value"):
+        # send a rest post request to the backend
+        r=requests.post(backend + '/set', json=request.json)
+        return r.json(), r.status_code # jsonify({"message": "Value set successfully"}), 200
 
 @app.route('/update', methods=['POST'])
 def update_value():
-    # send a rest post request to the backend
-    r=requests.post(backend + '/update', json=request.json)
-    return r.json(), r.status_code
+    with tracer.start_as_current_span("update_value"):
+        # send a rest post request to the backend
+        r=requests.post(backend + '/update', json=request.json)
+        return r.json(), r.status_code
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
-    
-    # Input validation - only allow alphanumeric characters and some safe symbols
-    if not re.match(r'^[a-zA-Z0-9_-]+$', key):
-        return jsonify({"message": "Invalid key format"}), 400
-        
-    try:
-        # Use proper URL formatting instead of string concatenation
-        response = requests.get(f"{backend}/get/{key}", timeout=5)
-        
-        if response.status_code == 200:
-            # data = response.json()
-            # sanitized_data = {k: escape(v) if isinstance(v, str) else v for k, v in data.items()}
-            return response.json(), 200
-        elif response.status_code == 404:
-            return jsonify({"message": "Key not found"}), 404
-        else:
-            # Log the actual error but don't expose details to client
-            print(f"Backend error: {response.text}")
-            return jsonify({"message": "Internal server error"}), 500
+    with tracer.start_as_current_span("get_value"):    
+        # Input validation - only allow alphanumeric characters and some safe symbols
+        if not re.match(r'^[a-zA-Z0-9_-]+$', key):
+            return jsonify({"message": "Invalid key format"}), 400
             
-    except requests.exceptions.RequestException as e:
-        print(f"Request error: {str(e)}")
-        return jsonify({"message": "Error communicating with backend"}), 500
+        try:
+            # Use proper URL formatting instead of string concatenation
+            response = requests.get(f"{backend}/get/{key}", timeout=5)
+            
+            if response.status_code == 200:
+                # data = response.json()
+                # sanitized_data = {k: escape(v) if isinstance(v, str) else v for k, v in data.items()}
+                return response.json(), 200
+            elif response.status_code == 404:
+                return jsonify({"message": "Key not found"}), 404
+            else:
+                # Log the actual error but don't expose details to client
+                logger.error(f"Backend error: {response.text}")
+                return jsonify({"message": "Internal server error"}), 500
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error: {str(e)}", exc_info=True)
+            return jsonify({"message": "Error communicating with backend"}), 500
     
 @app.route('/health', methods=['GET'])
 def health():

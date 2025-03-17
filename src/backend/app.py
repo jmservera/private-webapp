@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.dbapi import trace_integration, instrument_connection
+from opentelemetry import trace
 
 import logging
 # Import the `configure_azure_monitor()` function from the
@@ -24,6 +25,7 @@ if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
 
 logger = logging.getLogger(APP_NAME)  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
 logger.setLevel(LEVEL)
+tracer=trace.get_tracer(APP_NAME)
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" not in os.environ):
     logger.warning("APPLICATIONINSIGHTS_CONNECTION_STRING not found in environment variables.")
@@ -46,14 +48,15 @@ def getConnection()->pyodbc.Connection:
     global conn_str
 
     if conn is None:
-        try:
-            logger.info("Connecting to database")
-            conn = pyodbc.connect(conn_str)
-            instrument_connection("dbConnection", conn, database_system="mssql")
-            logger.info("Connected to database")
-        except pyodbc.Error as e:
-            logger.error("Error connecting to database", exc_info=True)
-            raise e
+        with tracer.start_as_current_span("getConnection"):
+            try:
+                logger.info("Connecting to database")
+                conn = pyodbc.connect(conn_str)
+                instrument_connection("dbConnection", conn, database_system="mssql")
+                logger.info("Connected to database")
+            except pyodbc.Error as e:
+                logger.error("Error connecting to database", exc_info=True)
+                raise e
 
     return conn
 
@@ -75,35 +78,38 @@ def health():
 
 @app.route('/set', methods=['POST'])
 def create_value():
-    logger.info("Value %s",request.json)
-    key = request.json.get('key')
-    value = request.json.get('value')
-    query=f"INSERT INTO {table_name}([key], [stored_value]) VALUES (?, ?)"
-    logger.info("Query %s",query)
-    conn = getConnection()
-    conn.execute(query, key, value)
-    conn.commit()
-    return jsonify({"message": "Value set successfully"}), 200
+    with tracer.start_as_current_span("create_value"):
+        logger.info("Value %s",request.json)
+        key = request.json.get('key')
+        value = request.json.get('value')
+        query=f"INSERT INTO {table_name}([key], [stored_value]) VALUES (?, ?)"
+        logger.info("Query %s",query)
+        conn = getConnection()
+        conn.execute(query, key, value)
+        conn.commit()
+        return jsonify({"message": "Value set successfully"}), 200
 
 @app.route('/update', methods=['POST'])
 def set_value():
-    key = request.json.get('key')
-    value = request.json.get('value')
-    conn = getConnection()
-    conn.execute(f"UPDATE {table_name} SET [stored_value] = ? WHERE [key] = ?;", value, key)
-    conn.commit()
-    return jsonify({"message": "Value updated successfully"}), 200
+    with tracer.start_as_current_span("set_value"):
+        key = request.json.get('key')
+        value = request.json.get('value')
+        conn = getConnection()
+        conn.execute(f"UPDATE {table_name} SET [stored_value] = ? WHERE [key] = ?;", value, key)
+        conn.commit()
+        return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
-    conn = getConnection()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT [stored_value] FROM {table_name} WHERE [key] = ?;", (key,))
-    row = cursor.fetchone()
-    if row:
-        return jsonify({"key": key, "value": row[0]}), 200
-    else:
-        return jsonify({"message": "Key not found"}), 404
+    with tracer.start_as_current_span("get_value"):
+        conn = getConnection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT [stored_value] FROM {table_name} WHERE [key] = ?;", (key,))
+        row = cursor.fetchone()
+        if row:
+            return jsonify({"key": key, "value": row[0]}), 200
+        else:
+            return jsonify({"message": "Key not found"}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT)
