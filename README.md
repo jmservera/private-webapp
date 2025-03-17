@@ -1,95 +1,117 @@
-# WebApp with private backend and database
+# WebApp with Private Backend and Database
 
-This is an example deployment where you have a web app with a Frontend that has a public endpoint, but the backend and database are private. It makes use of private endpoints and vnet integration.
-As the backend and database are private, the frontend needs to be able to communicate with them. This is done by using a private endpoint for the backend and a private link for the database.
-To be able to deploy the source code to the backend using GitHub Actions, you need to setup a GitHub runner in the same vnet as the backend. This is done by using a self-hosted runner configured by a custom script that runs during the VM setup.
-For the database, we also need to run an initialization script to create the database and tables. This is done by using a custom script that will run during initialization using a Microsoft.Resources/deploymentScripts definition, which is a part of the ARM template. This script will run once when the database is created.
+This repository demonstrates deploying a secure web application architecture on Azure, featuring a publicly accessible frontend, a private backend, and a private SQL database. It leverages Azure private endpoints, VNet integration, managed identities, and GitHub Actions for CI/CD automation.
 
-## Architecture
+## Architecture Overview
 
-This solution deploys the following components:
+The solution deploys the following Azure resources:
 
-- **Virtual Network** with three subnets:
-  - App subnet (for web app integration)
-  - Private subnet (for private endpoints)
-  - VM subnet (for GitHub runner)
-- **Frontend Web App** with public access
-- **Backend Web App** with private access and managed identity
-- **SQL Database** with private endpoint
-- **Container Registry** for storing Docker images
-- **GitHub Runner VM** for CI/CD automation
-- **Application Insights** for monitoring
+- **Virtual Network (VNet)** with four subnets:
+  - **App subnet**: Hosts frontend and backend web apps with VNet integration.
+  - **Private subnet**: Dedicated to private endpoints for secure internal communication.
+  - **VM subnet**: Hosts the GitHub Actions self-hosted runner VM.
+  - **CI subnet**: Used by deployment scripts running in Azure Container Instances.
+- **Frontend Web App**: Publicly accessible, communicates securely with the backend via private endpoints.
+- **Backend Web App**: Private access only, uses a user-assigned managed identity for secure database access.
+- **Azure SQL Database**: Private access via private endpoint, initialized with custom scripts.
+- **Azure Container Registry (ACR)**: Stores Docker images for frontend and backend applications.
+- **GitHub Runner VM**: Self-hosted runner for secure CI/CD within the private network.
+- **Application Insights**: Integrated telemetry and monitoring for frontend and backend applications.
 
 ### Network Architecture
 
-The solution uses a hub-and-spoke network architecture with private endpoints to secure communication:
+The solution uses a single VNet with clearly defined subnets and private endpoints to secure internal communication:
 
-1. The Frontend Web App is publicly accessible but connects to the backend through private endpoints
-2. The Backend Web App is not publicly accessible and communicates with the database through private endpoints
-3. The GitHub Runner VM is deployed within the same VNet to access private resources
+- **Frontend Web App**: Publicly accessible, connects securely to the backend via private endpoints.
+- **Backend Web App**: Not publicly accessible, communicates securely with the SQL database via private endpoints.
+- **GitHub Runner VM**: Deployed within the same VNet, enabling secure CI/CD operations and access to private resources.
 
 ## Prerequisites
 
-Before deploying, you'll need:
+Before deploying, ensure you have:
 
-1. Azure CLI installed and authenticated
-2. GitHub repository for your application code
-3. GitHub Personal Access Token (PAT) with appropriate permissions
-4. SSH public key for the GitHub runner VM authentication
+1. Azure CLI installed and authenticated.
+2. GitHub repository for your application code.
+3. GitHub Personal Access Token (PAT) with appropriate permissions.
+4. SSH public key for GitHub runner VM authentication.
 
 ## Deployment
 
-You can use the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) to deploy this example. First, you need to login to your Azure account:
+Use the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) to deploy the solution:
 
 ```bash
 az login
-```
-
-Then you can run the following command to deploy the resources:
-
-```bash
 azd up
 ```
 
-The deployment will prompt you for the following parameters:
+You'll be prompted for:
 
-- Environment name (used as prefix for resources)
-- Location for deployment
+- Environment name (prefix for resources)
+- Azure region for deployment
 - SQL administrator username and password
 - GitHub repository owner and name
-- GitHub PAT and token for GitHub Actions
+- GitHub PAT for GitHub Actions
 - SSH public key for VM authentication
 
-## Setting up GitHub Runner
+## GitHub Actions Runner Setup
 
-To deploy the source code to the backend using GitHub Actions, you need to set up a GitHub runner in the same VNet as the backend. This is done by using a self-hosted runner configured by a custom script that runs during the VM setup.
+The GitHub Actions runner is automatically configured during deployment via a custom VM extension script ([`scripts/install-packages.sh`](scripts/install-packages.sh)). This script:
+
+- Installs required packages (Docker, Azure CLI, GitHub CLI).
+- Registers the VM as a self-hosted runner in your GitHub repository.
+- Configures multiple runner instances for parallel CI/CD jobs.
+
+To verify or manage runners:
 
 1. Navigate to your GitHub repository.
 2. Go to **Settings** > **Actions** > **Runners**.
-3. Follow the instructions to add a new self-hosted runner.
-4. Ensure the runner is configured to run in the same VNet as the backend.
+3. Confirm the self-hosted runners are online and correctly configured.
 
-## Initializing the Database
+## Database Initialization
 
-To initialize the database and create the necessary tables, a custom script will run during the initialization using a `Microsoft.Resources/deploymentScripts` definition, which is part of the ARM template.
+The SQL database is initialized automatically during deployment using a custom Azure deployment script ([`scripts/create-sql-user.sh`](scripts/create-sql-user.sh)). This script:
 
-1. Ensure the deployment script is defined in your Bicep files.
-2. The script will automatically run once when the database is created.
-3. Verify the database and tables are created successfully.
+- Creates a database user linked to the backend's managed identity.
+- Assigns appropriate database roles (`db_datareader`, `db_datawriter`, `db_ddladmin`).
+- Creates the required tables (`Value_Store`) if they don't exist.
 
-## Managed Identities
+Ensure the deployment script is correctly referenced in your Bicep files ([`infra/modules/sqlDatabase.bicep`](infra/modules/sqlDatabase.bicep)).
 
-This solution uses user-assigned managed identities for:
+## Telemetry and Monitoring
 
-1. **Backend Web App** - To securely connect to the SQL database using Azure AD authentication
-2. **GitHub Runner VM** - To manage deployments and interact with Azure resources
+Both frontend and backend applications integrate with Azure Application Insights for comprehensive telemetry:
 
-These identities are granted specific RBAC permissions to minimize access based on the principle of least privilege.
+- **Backend** ([`src/backend/app.py`](src/backend/app.py)):
+  - Uses OpenTelemetry instrumentation for Flask and database interactions.
+  - Sends logs, metrics, and traces to Application Insights.
+
+- **Frontend** ([`src/frontend/app.py`](src/frontend/app.py)):
+  - Uses OpenTelemetry instrumentation for Flask.
+  - Captures user interactions, HTTP requests, and errors.
+
+Telemetry is configured via the `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable, automatically set during deployment.
 
 ## Security Features
 
-- All services use HTTPS and TLS 1.2
-- Private endpoints for backend and database connections
-- Firewall rules limiting access to resources
-- Managed identities for authentication instead of passwords where possible
-- VNET integration for secure network communication
+- **HTTPS and TLS 1.2** enforced on all web apps.
+- **Private endpoints** for secure internal communication between frontend, backend, and database.
+- **Firewall rules** restrict external access to sensitive resources.
+- **Managed identities** used for secure, passwordless authentication.
+- **VNet integration** ensures secure network isolation and communication.
+
+## Scripts Overview
+
+The repository includes several scripts to automate setup and management tasks:
+
+- [`scripts/install-packages.sh`](scripts/install-packages.sh): Installs dependencies and configures GitHub Actions runners on the VM.
+- [`scripts/create-sql-user.sh`](scripts/create-sql-user.sh): Initializes the SQL database and configures managed identity access.
+- [`scripts/set-github-vars.sh`](scripts/set-github-vars.sh): Sets GitHub repository variables required for CI/CD workflows.
+- [`scripts/uninstall-action-runnner.sh`](scripts/uninstall-action-runnner.sh): Removes GitHub Actions runners from the VM (optional cleanup).
+
+These scripts are automatically executed during deployment and VM provisioning.
+
+## Next Steps
+
+- Customize the frontend and backend applications as needed.
+- Monitor application health and telemetry via Azure Application Insights.
+- Regularly review and update dependencies using Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)).
