@@ -14,7 +14,9 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 load_dotenv()
 
 APP_NAME=os.getenv("APP_NAME", "app.backend") 
+PORT=int(os.getenv("PORT", 8080))
 LEVEL = os.getenv("LOG_LEVEL", "INFO")
+conn_str = os.environ["ConnectionString"]
 
 if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
     # Configure OpenTelemetry to use Azure Monitor with the 
@@ -34,45 +36,24 @@ logging.info("Reading environment variables")
 table_name = os.getenv("TableName", "Value_Store")
 if table_name is None or table_name == "":
     raise ValueError("TableName environment variable not set")
-conn_str = os.environ["ConnectionString"]
-PORT=int(os.getenv("PORT", 8080))
-conn = None
 
 app = Flask(APP_NAME)
 
 FlaskInstrumentor().instrument_app(app)
 trace_integration(pyodbc, "connect", "odbc",enable_commenter=True)
 
-def getConnection()->pyodbc.Connection:
-    global conn
-    global conn_str
-
-    if conn is None:
-        with tracer.start_as_current_span("getConnection"):
-            try:
-                logger.info("Connecting to database")
-                conn = pyodbc.connect(conn_str)
-                instrument_connection("dbConnection", conn, database_system="mssql")
-                logger.info("Connected to database")
-            except pyodbc.Error as e:
-                logger.error("Error connecting to database", exc_info=True)
-                raise e
-
-    return conn
-
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({"message": "pong"}), 200
 
 @app.route('/health', methods=['GET'])
-def health():
-    # check if the redis server is healthy
-    try:
-        conn = getConnection()
-        info=conn.getinfo(pyodbc.SQL_DBMS_NAME)
-        logger.info("DBMS Name: %s",info)
-    except pyodbc.Error:
-        return jsonify({"message": "Unhealthy"}), 500
+def health():    
+    with pyodbc.connect(conn_str) as conn:
+        try:
+            info=conn.getinfo(pyodbc.SQL_DBMS_NAME)
+            logger.info("DBMS Name: %s",info)
+        except pyodbc.Error:
+            return jsonify({"message": "Unhealthy"}), 500
 
     return jsonify({"message": "Healthy"}), 200
 
@@ -83,33 +64,33 @@ def create_value():
         key = request.json.get('key')
         value = request.json.get('value')
         query=f"INSERT INTO {table_name}([key], [stored_value]) VALUES (?, ?)"
-        logger.info("Query %s",query)
-        conn = getConnection()
-        conn.execute(query, key, value)
-        conn.commit()
-        return jsonify({"message": "Value set successfully"}), 200
+        with pyodbc.connect(conn_str) as conn:
+            logger.info("Query %s",query)
+            conn.execute(query, key, value)
+            conn.commit()
+            return jsonify({"message": "Value set successfully"}), 200
 
 @app.route('/update', methods=['POST'])
 def set_value():
     with tracer.start_as_current_span("set_value"):
         key = request.json.get('key')
         value = request.json.get('value')
-        conn = getConnection()
-        conn.execute(f"UPDATE {table_name} SET [stored_value] = ? WHERE [key] = ?;", value, key)
-        conn.commit()
-        return jsonify({"message": "Value updated successfully"}), 200
+        with pyodbc.connect(conn_str) as conn:
+            conn.execute(f"UPDATE {table_name} SET [stored_value] = ? WHERE [key] = ?;", value, key)
+            conn.commit()
+            return jsonify({"message": "Value updated successfully"}), 200
 
 @app.route('/get/<key>', methods=['GET'])
 def get_value(key):
     with tracer.start_as_current_span("get_value"):
-        conn = getConnection()
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT [stored_value] FROM {table_name} WHERE [key] = ?;", (key,))
-        row = cursor.fetchone()
-        if row:
-            return jsonify({"key": key, "value": row[0]}), 200
-        else:
-            return jsonify({"message": "Key not found"}), 404
+        with pyodbc.connect(conn_str) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT [stored_value] FROM {table_name} WHERE [key] = ?;", (key,))
+            row = cursor.fetchone()
+            if row:
+                return jsonify({"key": key, "value": row[0]}), 200
+            else:
+                return jsonify({"message": "Key not found"}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT)
