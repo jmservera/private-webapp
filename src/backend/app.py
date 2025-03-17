@@ -3,7 +3,7 @@ import pyodbc
 import os
 from dotenv import load_dotenv
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
-from opentelemetry.instrumentation.dbapi import trace_integration
+from opentelemetry.instrumentation.dbapi import trace_integration, instrument_connection
 
 import logging
 # Import the `configure_azure_monitor()` function from the
@@ -49,6 +49,8 @@ def getConnection()->pyodbc.Connection:
         try:
             logger.info("Connecting to database")
             conn = pyodbc.connect(conn_str)
+            instrument_connection("dbConnection", conn, database_system="mssql")
+            logger.info("Connected to database")
         except pyodbc.Error as e:
             logger.error("Error connecting to database", exc_info=True)
             raise e
