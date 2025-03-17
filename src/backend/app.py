@@ -3,6 +3,7 @@ import pyodbc
 import os
 from dotenv import load_dotenv
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.dbapi import trace_integration
 
 import logging
 # Import the `configure_azure_monitor()` function from the
@@ -38,6 +39,7 @@ conn = None
 app = Flask(APP_NAME)
 
 FlaskInstrumentor().instrument_app(app)
+trace_integration(pyodbc, "connect", "odbc")
 
 def getConnection()->pyodbc.Connection:
     global conn
