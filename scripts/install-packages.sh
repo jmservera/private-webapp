@@ -58,35 +58,37 @@ echo "Package installation completed successfully!"
 echo "GitHub Login"
 # login to GitHub
 echo "${GITHUB_PAT}" | gh auth login --with-token  
-# get the runner token
-export GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
 
-# Keep in mind that all the bash variables are replaced before running the script
-# as the script is generated in-place, replacing all the variables before sending it
-# to bash. If you need to use any variable that is assigned in the script, escape the $ sign.
-sudo -iu $USER bash<<_
+# in NUM_RUNNERS is not set, default to 2
+NUM_RUNNERS=${NUM_RUNNERS:-2}
+# loop n times
+for i in $(seq 1 $NUM_RUNNERS); do
+  echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}... for user ${USER}"
+
+  # get the runner token
+  export GITHUB_RUNNER_TOKEN=$(gh api -X POST "/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" -q .token)
+  export GITHUB_RUNNER_NAME="${REPO_NAME}-runner-${i}"  
+  # Keep in mind that all the bash variables are replaced before running the script
+  # as the script is generated in-place, replacing all the variables before sending it
+  # to bash. If you need to use any variable that is assigned in the script, escape the $ sign.
+  sudo -iu $USER bash<<_
 set -e
 echo "Installing the self-hosted runner for ${REPO_OWNER}/${REPO_NAME}... for user ${USER}"
-if [ -f ".env" ]; then
-  echo "runner already installed"
-  cat .env
-else
-  echo ".env file not found, install..."
-  if [ ! -d "actions-runner" ]; then
-    mkdir actions-runner
-  fi
-
-  cd actions-runner
+if [ ! -d "${GITHUB_RUNNER_NAME}" ]; then
+  mkdir ${GITHUB_RUNNER_NAME}
+  cd ${GITHUB_RUNNER_NAME}  
 
   # Download the latest runner package
   curl -O -L https://github.com/actions/runner/releases/download/v2.320.1/actions-runner-linux-x64-2.320.1.tar.gz
+
+  # TODO: create as many runners as needed
   # Extract the installer
   tar xzf ./actions-runner-linux-x64-2.320.1.tar.gz
 
   echo "Runner package extracted successfully!"
 
   echo "Configuring the self-hosted runner with user ${USER}..."
-  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_RUNNER_TOKEN}" --labels  self-hosted --unattended --replace
+  ./config.sh --url "https://github.com/${REPO_OWNER}/${REPO_NAME}" --token "${GITHUB_RUNNER_TOKEN}" --name "${GITHUB_RUNNER_NAME}" --labels  self-hosted --unattended --replace
   echo "Runner configured successfully!"
   echo "Installing the self-hosted runner as a service..."
   sudo ./svc.sh install
@@ -94,9 +96,11 @@ else
   echo "Starting the self-hosted runner service..."
   sudo ./svc.sh start
   echo "Runner service started successfully!"
-  echo "GITHUB_RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN}" > ~/.env
+  # echo "GITHUB_RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN}" > ~/.env
 fi
 _
+
+done
 
 cd /home/$USER
 
