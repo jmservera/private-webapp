@@ -22,6 +22,7 @@ if ("APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ):
     # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable.
     configure_azure_monitor(
         logger_name=APP_NAME,  # Set the namespace for the logger in which you would like to collect telemetry for if you are collecting logging telemetry. This is imperative so you do not collect logging telemetry from the SDK itself.
+        enable_live_metrics=True
     )
 
 logger = logging.getLogger(APP_NAME)  # Logging telemetry will be collected from logging calls made with this logger and all of it's children loggers.
