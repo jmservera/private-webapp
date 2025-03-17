@@ -95,7 +95,7 @@ module backEndApp './modules/webApp.bicep' = {
       }
       {
         name: 'ConnectionString'
-        value: 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;Authentication=ActiveDirectoryMsi;'
+        value: 'Driver={ODBC Driver 18 for SQL Server};Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};UID=${backendAppIdentity.outputs.clientId};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;Authentication=ActiveDirectoryMsi;'
       }
       {
         name: 'APPLICATIONINSIGHTS_INSTRUMENTATIONKEY'
