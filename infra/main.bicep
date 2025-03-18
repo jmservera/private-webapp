@@ -7,7 +7,8 @@ param environmentName string
 
 @description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
 param clientIpAddress string
-param publicKey string
+@secure()
+param publicKey string = ''
 param repo_owner string
 param repo_name string
 
@@ -26,7 +27,6 @@ param githubPAT string
 
 @description('Set to false to make the critical resources public. Use this only for testing.')
 param private bool = true
-
 
 // Tags that should be applied to all resources.
 // 

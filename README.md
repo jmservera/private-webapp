@@ -31,9 +31,16 @@ The solution uses a single VNet with clearly defined subnets and private endpoin
 Before deploying, ensure you have:
 
 1. Azure CLI installed and authenticated.
+1. [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) extension installed.
 2. GitHub repository for your application code.
-3. GitHub Personal Access Token (PAT) with appropriate permissions.
-4. SSH public key for GitHub runner VM authentication.
+3. GitHub Personal Access Token (PAT) with appropriate permissions:
+    * Actions Access: Read-only
+    * Administration Access: Read and write
+    * Metadata Access: Read-only
+    * Secrets Access: Read and write
+    * Variables Access: Read and write
+
+
 
 ## Deployment
 
@@ -51,7 +58,7 @@ You'll be prompted for:
 - SQL administrator username and password
 - GitHub repository owner and name
 - GitHub PAT for GitHub Actions
-- SSH public key for VM authentication
+
 
 ## GitHub Actions Runner Setup
 
@@ -103,15 +110,14 @@ Telemetry is configured via the `APPLICATIONINSIGHTS_CONNECTION_STRING` environm
 
 The repository includes several scripts to automate setup and management tasks:
 
-- [`scripts/install-packages.sh`](scripts/install-packages.sh): Installs dependencies and configures GitHub Actions runners on the VM.
-- [`scripts/create-sql-user.sh`](scripts/create-sql-user.sh): Initializes the SQL database and configures managed identity access.
-- [`scripts/set-github-vars.sh`](scripts/set-github-vars.sh): Sets GitHub repository variables required for CI/CD workflows.
-- [`scripts/uninstall-action-runnner.sh`](scripts/uninstall-action-runnner.sh): Removes GitHub Actions runners from the VM (optional cleanup).
+- [`scripts/install-packages.sh`](scripts/install-packages.sh): Installs dependencies and configures GitHub Actions runners on the VM. By default, it creates two runner instances for parallel CI/CD jobs.
+- [`scripts/create-sql-user.sh`](scripts/create-sql-user.sh): Initializes the SQL database and configures the managed identity access. Uses a trick to avoid needing a highly privileged user for adding the managed identity to the database.
+- [`scripts/set-github-vars.sh`](scripts/set-github-vars.sh): Sets GitHub repository variables required for CI/CD workflows after running `azd up`. Then it launches the CI/CD pipeline.
+
 
 These scripts are automatically executed during deployment and VM provisioning.
 
 ## Next Steps
 
 - Customize the frontend and backend applications as needed.
-- Monitor application health and telemetry via Azure Application Insights.
 - Regularly review and update dependencies using Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)).

@@ -15,7 +15,7 @@ param adminUserName string = 'localAdminUser'
 
 @description('Public Key for GH Runner VM authentication')
 @secure()
-param publicKey string
+param publicKey string = ''
 
 param repo_name string
 param repo_owner string
@@ -290,12 +290,14 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
     disablePasswordAuthentication: empty(adminPassword) ? true : false
     adminPassword: adminPassword
     location: location
-    publicKeys: [
-      {
-        keyData: publicKey
-        path: '/home/localAdminUser/.ssh/authorized_keys'
-      }
-    ]
+    publicKeys: empty(publicKey)
+      ? null
+      : [
+          {
+            keyData: publicKey
+            path: '/home/localAdminUser/.ssh/authorized_keys'
+          }
+        ]
   }
 }
 
