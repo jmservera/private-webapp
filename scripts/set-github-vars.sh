@@ -13,7 +13,7 @@ EOF
 # Check if required environment variables are set
 if [ -z "$GITHUB_PAT" ] || [ -z "$REPO_OWNER" ] || [ -z "$REPO_NAME" ] || [ -z "$RESOURCE_GROUP" ]; then
   echo "Error: Required environment variables not set."
-  echo "Please set GITHUB_PAT, REPO_OWNER, REPO_NAME, and RESOURCE_GROUP."
+  echo "Please set GITHUB_PAT ${GITHUB_PAT}, REPO_OWNER ${REPO_OWNER}, REPO_NAME ${REPO_NAME}, and RESOURCE_GROUP ${RESOURCE_GROUP}."
   exit 1
 fi
 
@@ -48,5 +48,9 @@ gh variable set RESOURCE_GROUP -b "$RESOURCE_GROUP" --repo $REPO_OWNER/$REPO_NAM
 gh variable set ACR_NAME -b "$ACR_NAME" --repo $REPO_OWNER/$REPO_NAME
 gh variable set FRONTEND_APP_NAME -b "$FRONTEND_APP_NAME" --repo $REPO_OWNER/$REPO_NAME
 gh variable set BACKEND_APP_NAME -b "$BACKEND_APP_NAME" --repo $REPO_OWNER/$REPO_NAME
+
+# Run the workflow to build and push the Docker images
+echo "Running the workflow to build and push the Docker images..."
+gh workflow run docker-image.yml --repo $REPO_OWNER/$REPO_NAME
 
 echo "GitHub variables set successfully!"
