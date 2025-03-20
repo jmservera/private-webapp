@@ -58,16 +58,26 @@ module frontEndApp './modules/webApp.bicep' = {
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
     appSettings: [
       {
-        name: 'BACKEND'
-        value: backEndApp.outputs.url
-      }
-      {
         name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
         value: '~3'
       }
       {
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: monitoring.outputs.applicationInsightsConnectionString
+      }
+    ]
+    prodAppSettings: [
+      {
+        name: 'BACKEND'
+        value: backEndApp.outputs.url
+        slotSetting: true
+      }
+    ]
+    stagingAppSettings: [
+      {
+        name: 'BACKEND'
+        value: backEndApp.outputs.stagingUrl
+        slotSetting: true
       }
     ]
   }
@@ -209,6 +219,18 @@ module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = if (private) {
     vnetId: vnet.outputs.vnetId
     subnetId: vnet.outputs.privateSubnetId
     privateLinkServiceId: backEndApp.outputs.id
+    targetSubResource: 'sites'
+  }
+}
+
+module backEndSlotPrivateEndpoint './modules/privateEndpoint.bicep' = if (private) {
+  name: 'backEndSlotPrivateEndpoint'
+  params: {
+    name: '${namePrefix}-backend-staging'
+    location: location
+    vnetId: vnet.outputs.vnetId
+    subnetId: vnet.outputs.privateSubnetId
+    privateLinkServiceId: backEndApp.outputs.stagingId
     targetSubResource: 'sites'
   }
 }
