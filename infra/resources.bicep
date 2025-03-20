@@ -158,6 +158,7 @@ resource ghRunnerResourceGroupContributor 'Microsoft.Authorization/roleAssignmen
     // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
     principalId: ghRunnerAppIdentity.outputs.principalId
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor role
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -165,9 +166,11 @@ resource ghRunnerWebSiteContributor 'Microsoft.Authorization/roleAssignments@202
   scope: resourceGroup()
   name: guid(resourceGroup().id, 'ghRunnerWebSiteContributor')
   properties: {
-    // delegatedManagedIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
     principalId: ghRunnerAppIdentity.outputs.principalId
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'de139f84-1756-47ae-9be6-808fbbe84772') // WebSite Contributor role
+    // as the Managed Identity was just created, it may take a few minutes to be replicated to all regions
+    // so we need to specify the principal type as 'ServicePrincipal', otherwise the assignment may fail if the identity is not yet available
+    principalType: 'ServicePrincipal'
   }
 }
 

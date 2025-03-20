@@ -1,6 +1,29 @@
 param namePrefix string
 param location string = resourceGroup().location
 
+module publicIp 'br/public:avm/res/network/public-ip-address:0.8.0' = {
+  name: '${namePrefix}-publicip'
+  params: {
+    location: location
+    name: '${namePrefix}-publicip'
+  }
+}
+
+resource natGateway 'Microsoft.Network/natGateways@2023-05-01' = {
+  name: '${namePrefix}-natgateway'
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIpAddresses: [
+      {
+        id: publicIp.outputs.resourceId // create a public IP resource separately
+      }
+    ]
+  }
+}
+
 resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
   name: '${namePrefix}-vnet'
   location: location
@@ -15,6 +38,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
         name: 'app-subnet'
         properties: {
           addressPrefix: '10.0.0.0/24'
+          natGateway: {
+            id: natGateway.id
+          }
           privateEndpointNetworkPolicies: 'Disabled'
           delegations: [
             {
@@ -38,6 +64,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
         properties: {
           addressPrefix: '10.0.2.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
+          natGateway: {
+            id: natGateway.id
+          }
         }
       }
       {
@@ -45,6 +74,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
         properties: {
           addressPrefix: '10.0.3.0/24'
           privateEndpointNetworkPolicies: 'Disabled'
+          natGateway: {
+            id: natGateway.id
+          }
           delegations: [
             {
               name: 'Microsoft.ContainerInstance/containerGroups'

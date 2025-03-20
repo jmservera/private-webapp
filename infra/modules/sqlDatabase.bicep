@@ -38,26 +38,25 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
       azureADOnlyAuthentication: false
       principalType: 'Application'
       sid: deploymentIdentityClientId
-      tenantId: subscription().tenantId      
+      tenantId: subscription().tenantId
     }
-    publicNetworkAccess: private? 'Disabled': 'Enabled'
+    publicNetworkAccess: private ? 'Disabled' : 'Enabled'
     minimalTlsVersion: '1.2'
-
   }
 
   resource database 'databases' = {
     name: databaseName
     location: location
-    sku: sku  
-  } 
-  resource firewallRulesAzure 'firewallRules' = if(!private) {
+    sku: sku
+  }
+  resource firewallRulesAzure 'firewallRules' = if (!private) {
     name: 'AllowAllWindowsAzureIps'
     properties: {
       startIpAddress: '0.0.0.0'
       endIpAddress: '0.0.0.0'
     }
   }
-  resource firewallRulesClient 'firewallRules' = if(!private) {
+  resource firewallRulesClient 'firewallRules' = if (!private) {
     name: 'AllowClientIp'
     properties: {
       startIpAddress: clientIpAddress
@@ -66,7 +65,6 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   }
 }
 
-
 resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: substring(replace('${databaseName}deploymentstorage', '-', ''), 0, 24)
   location: location
@@ -74,6 +72,7 @@ resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' 
   sku: { name: 'Standard_LRS' }
   properties: {
     allowBlobPublicAccess: false
+    allowSharedKeyAccess: true
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       resourceAccessRules: []
@@ -85,7 +84,7 @@ resource deploymentScriptStorage 'Microsoft.Storage/storageAccounts@2023-05-01' 
           action: 'Allow'
         }
       ]
-      defaultAction: 'Deny'
+      defaultAction: 'Allow'
     }
     accessTier: 'Hot'
   }
@@ -123,11 +122,12 @@ resource deploymentMI 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     principalId: deploymentIdentityPrincipalId
     roleDefinitionId: storagedatacontributor.id
+    principalType: 'ServicePrincipal'
   }
 }
 
 // create private endpoints for the storage account
-module storagePrivateEndpoint 'privateEndpoint.bicep' = if(private) {
+module storagePrivateEndpoint 'privateEndpoint.bicep' = if (private) {
   name: '${databaseName}-deployment-storage-pe'
   params: {
     location: location
@@ -140,7 +140,7 @@ module storagePrivateEndpoint 'privateEndpoint.bicep' = if(private) {
 }
 
 // create private endpoints for the SQL Server
-module dbPrivateEndpoint 'privateEndpoint.bicep' = if(private) {
+module dbPrivateEndpoint 'privateEndpoint.bicep' = if (private) {
   name: '${databaseName}-sql-server-pe'
   params: {
     location: location
@@ -162,10 +162,15 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
       '${deploymentIdentityResourceId}': {}
     }
   }
-  dependsOn: private? [
-    dbPrivateEndpoint
-    storagePrivateEndpoint
-  ]:[]
+  dependsOn: private
+    ? [
+        dbPrivateEndpoint
+        storagePrivateEndpoint
+        deploymentMI
+      ]
+    : [
+        deploymentMI
+      ]
   properties: {
     azCliVersion: '2.37.0'
     retentionInterval: 'PT1H' // Retain the script resource for 1 hour after it ends running
