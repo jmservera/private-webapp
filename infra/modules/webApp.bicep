@@ -8,6 +8,7 @@ param virtualNetworkSubnetId string = ''
 param appSettings array = []
 param connectionStrings array = []
 param identityId string = ''
+param linuxFxVersion string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: planName
@@ -30,7 +31,7 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
     publicNetworkAccess: publicNetworkAccess
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+      linuxFxVersion: linuxFxVersion
       http20Enabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
@@ -54,7 +55,7 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
       }
 }
 
-resource prod 'Microsoft.Web/sites/slots@2022-09-01' = {
+resource stagingSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
   name: 'staging'
   parent: site
   location: location
@@ -63,7 +64,7 @@ resource prod 'Microsoft.Web/sites/slots@2022-09-01' = {
     publicNetworkAccess: publicNetworkAccess
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+      linuxFxVersion: linuxFxVersion
       http20Enabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'

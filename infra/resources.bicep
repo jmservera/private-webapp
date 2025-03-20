@@ -29,6 +29,9 @@ param private bool = true
 
 param ValuesTableName string = 'Value_Store'
 
+param frontendContainerImage string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+param backendContainerImage string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
@@ -51,6 +54,7 @@ module frontEndApp './modules/webApp.bicep' = {
     skuName: 'S1'
     skuTier: 'Standard'
     publicNetworkAccess: 'Enabled'
+    linuxFxVersion: frontendContainerImage
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
     appSettings: [
       {
@@ -87,6 +91,7 @@ module backEndApp './modules/webApp.bicep' = {
     skuName: 'S1'
     skuTier: 'Standard'
     publicNetworkAccess: 'Disabled'
+    linuxFxVersion: backendContainerImage
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
     appSettings: [
       {

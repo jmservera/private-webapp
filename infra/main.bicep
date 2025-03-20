@@ -28,6 +28,9 @@ param githubPAT string
 @description('Set to false to make the critical resources public. Use this only for testing.')
 param private bool = true
 
+param frontendContainerImage string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+param backendContainerImage string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+
 // Tags that should be applied to all resources.
 // 
 // Note that 'azd-service-name' tags should be applied separately to service host resources.
@@ -58,6 +61,8 @@ module resources './resources.bicep' = {
     adminPassword: adminPassword
     githubPAT: githubPAT
     clientIpAddress: clientIpAddress
+    frontendContainerImage: frontendContainerImage
+    backendContainerImage: backendContainerImage
     private: private
   }
 }

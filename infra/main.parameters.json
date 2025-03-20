@@ -25,6 +25,12 @@
     },
     "private": {
       "value": "${PRIVATE}"
+    },
+    "frontendContainerImage": {
+      "value": "${FRONTEND_CONTAINER_IMAGE}"
+    },
+    "backendContainerImage": {
+      "value": "${BACKEND_CONTAINER_IMAGE}"
     }
   }
 }
