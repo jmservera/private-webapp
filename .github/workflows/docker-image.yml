@@ -65,7 +65,7 @@ jobs:
               --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} \
               --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --slot staging
             URL=$(az webapp deployment slot list --resource-group ${RESOURCE_GROUP} --name ${FRONTEND_APP_NAME} --query "[?name=='staging'].defaultHostName" -o tsv)
-            timeout 300 bash -c 'until [[ "$(curl -s -o /dev/null -w "%{http_code}" ${URL})" == "200" ]]; do sleep 5; echo -n "."; done'              
+            timeout 300 bash -c "until [[ '$(curl -L -s -o /dev/null -w %{http_code} ${URL})' == '200' ]]; do sleep 5; echo -n .; done"
             az webapp deployment slot swap -s staging --target-slot production -n "${FRONTEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}"
 
   build-and-deploy-backend:
@@ -115,5 +115,5 @@ jobs:
               --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} \
               --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --slot staging
             URL=$(az webapp deployment slot list --resource-group ${RESOURCE_GROUP} --name ${BACKEND_APP_NAME} --query "[?name=='staging'].defaultHostName" -o tsv)
-            timeout 300 bash -c 'until [[ "$(curl -s -o /dev/null -w "%{http_code}" ${URL})" == "200" ]]; do sleep 5; echo -n "."; done'
+            timeout 300 bash -c "until [[ '$(curl -L -s -o /dev/null -w %{http_code} ${URL})' == '200' ]]; do sleep 5; echo -n .; done"
             az webapp deployment slot swap -s staging --target-slot production -n "${BACKEND_APP_NAME}" --resource-group "${RESOURCE_GROUP}"
