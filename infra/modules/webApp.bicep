@@ -37,6 +37,40 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
       appSettings: appSettings
       connectionStrings: connectionStrings
       healthCheckPath: '/health'
+      alwaysOn: true
+    }
+    virtualNetworkSubnetId: virtualNetworkSubnetId
+  }
+
+  identity: (identityId == '')
+    ? {
+        type: 'SystemAssigned'
+      }
+    : {
+        type: 'UserAssigned'
+        userAssignedIdentities: {
+          '${identityId}': {}
+        }
+      }
+}
+
+resource prod 'Microsoft.Web/sites/slots@2022-09-01' = {
+  name: 'staging'
+  parent: site
+  location: location
+  properties: {
+    serverFarmId: appServicePlan.id
+    publicNetworkAccess: publicNetworkAccess
+    httpsOnly: true
+    siteConfig: {
+      linuxFxVersion: 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+      http20Enabled: true
+      minTlsVersion: '1.2'
+      ftpsState: 'Disabled'
+      appSettings: appSettings
+      connectionStrings: connectionStrings
+      healthCheckPath: '/health'
+      alwaysOn: true
     }
     virtualNetworkSubnetId: virtualNetworkSubnetId
   }
@@ -55,4 +89,4 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
 output id string = site.id
 output name string = site.name
 output url string = 'https://${site.properties.defaultHostName}'
-output principalId string = identityId==''? site.identity.principalId : ''
+output principalId string = identityId == '' ? site.identity.principalId : ''

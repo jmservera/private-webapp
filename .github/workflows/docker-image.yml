@@ -63,8 +63,7 @@ jobs:
           inlineScript: |
             az webapp config container set --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP \
               --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} \
-              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }}
-            az webapp restart --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP
+              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --slot staging
 
   build-and-deploy-backend:
     runs-on: self-hosted
@@ -111,5 +110,4 @@ jobs:
           inlineScript: |
             az webapp config container set --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP \
               --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} \
-              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} 
-            az webapp restart --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP
+              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --slot staging
