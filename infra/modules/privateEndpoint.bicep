@@ -1,5 +1,5 @@
 param name string
-param location string
+param location string = resourceGroup().location
 param subnetId string
 param vnetId string
 @description('The resource id of the resource to link with this private link.')

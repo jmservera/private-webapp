@@ -43,6 +43,10 @@ app = Flask(APP_NAME)
 FlaskInstrumentor().instrument_app(app)
 trace_integration(pyodbc, "connect", "odbc",enable_commenter=True)
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({"message": "Hello, World!"}), 200
+
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({"message": "pong"}), 200

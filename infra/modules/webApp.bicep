@@ -1,5 +1,5 @@
 param name string
-param location string
+param location string = resourceGroup().location
 param planName string
 param skuName string = 'S1'
 param skuTier string = 'Standard'

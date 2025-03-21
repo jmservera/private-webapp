@@ -1,4 +1,4 @@
-param location string
+param location string = resourceGroup().location
 param ghRunnerName string
 param repo_name string
 param repo_owner string

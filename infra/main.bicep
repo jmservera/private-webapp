@@ -63,11 +63,10 @@ module resources './resources.bicep' = {
     clientIpAddress: clientIpAddress
     frontendContainerImage: frontendContainerImage
     backendContainerImage: backendContainerImage
-    private: private
   }
 }
 
 output AZURE_RESOURCE_GHRUNNER_ID string = resources.outputs.AZURE_RESOURCE_GHRUNNER_ID
 output RESOURCE_GROUP string = rg.name
 output AZURE_RESOURCE_GHRUNNER_NAME string = resources.outputs.AZURE_RESOURCE_GHRUNNER_NAME
-output GITHUB_RUNNER_RESULT object = resources.outputs.GITHUB_RUNNER_RESULT
+output WEBAPP_URL string = resources.outputs.frontendUrl

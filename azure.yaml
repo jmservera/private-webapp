@@ -9,3 +9,10 @@ hooks:
   postup:
     run: ./scripts/set-github-vars.sh
     interactive: true
+  postdown:
+    run: |
+      echo "Cleaning up resources..."
+      azd env set FRONTEND_CONTAINER_IMAGE ""
+      azd env set BACKEND_CONTAINER_IMAGE ""
+    interactive: true
+    shell: sh
