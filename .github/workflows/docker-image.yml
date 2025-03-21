@@ -43,7 +43,7 @@ jobs:
     needs: compute_values
     strategy:
       matrix:
-        APP_NAME: [{folder: frontend, app: "${{ needs.compute_values.outputs.FRONTEND_APP_NAME }}"}, { folder:backend, app: "${{ needs.compute_values.outputs.BACKEND_APP_NAME }}" }]
+        APP_NAME: [{folder: frontend, app: "${{ needs.compute_values.outputs.FRONTEND_APP_NAME }}"}, { folder: backend, app: "${{ needs.compute_values.outputs.BACKEND_APP_NAME }}" }]
     env:
       RESOURCE_GROUP: ${{ needs.compute_values.outputs.RESOURCE_GROUP }}
       ACR_NAME: ${{ needs.compute_values.outputs.ACR_NAME }}
