@@ -64,6 +64,7 @@ jobs:
           inlineScript: |
             cd src/${{ matrix.APP_NAME.folder }}
             # Build the image
+            az acr login -n ${{ env.ACR_NAME }}
             az acr build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest -r ${{ env.ACR_NAME }} .
 
 
