@@ -26,17 +26,13 @@ jobs:
   compute_values:
     runs-on: self-hosted
     outputs:
-      ACR_NAME: ${{ env.ACR_NAME }}
       FRONTEND_APP_NAME: ${{ env.FRONTEND_APP_NAME }}
       BACKEND_APP_NAME: ${{ env.BACKEND_APP_NAME }}
-      RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
     steps:
       - name: Compute outputs
         run: |
-          echo "ACR_NAME=${{ env.ACR_NAME }}" >> $GITHUB_OUTPUT
           echo "FRONTEND_APP_NAME=${{ env.FRONTEND_APP_NAME }}" >> $GITHUB_OUTPUT
           echo "BACKEND_APP_NAME=${{ env.BACKEND_APP_NAME }}" >> $GITHUB_OUTPUT
-          echo "RESOURCE_GROUP=${{ env.RESOURCE_GROUP }}" >> $GITHUB_OUTPUT
 
   build-and-deploy:
     runs-on: self-hosted
@@ -44,9 +40,6 @@ jobs:
     strategy:
       matrix:
         APP_NAME: [{folder: frontend, app: "${{ needs.compute_values.outputs.FRONTEND_APP_NAME }}"}, { folder: backend, app: "${{ needs.compute_values.outputs.BACKEND_APP_NAME }}" }]
-    env:
-      RESOURCE_GROUP: ${{ needs.compute_values.outputs.RESOURCE_GROUP }}
-      ACR_NAME: ${{ needs.compute_values.outputs.ACR_NAME }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +55,7 @@ jobs:
         with:
           azcliversion: latest      
           inlineScript: |
-            echo "ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer -o tsv)" >> $GITHUB_ENV
+            echo "ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)" >> $GITHUB_ENV
 
       - name: Build and Push Docker image
         uses: azure/cli@v2
@@ -71,12 +64,7 @@ jobs:
           inlineScript: |
             cd src/${{ matrix.APP_NAME.folder }}
             # Build the image
-            az acr build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest -r $ACR_NAME .
-            az webapp restart --name ${{ matrix.APP_NAME }} --resource-group $RESOURCE_GROUP
-            # # Push to ACR using the az commands
-            # az acr login --name $ACR_NAME
-            # docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }}
-            # docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest
+            az acr build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest -r ${{ env.ACR_NAME }} .
 
 
       - name: Deploy Docker image to Web App
@@ -84,12 +72,12 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
-            az webapp config container set --name ${{ matrix.APP_NAME.app }} --resource-group $RESOURCE_GROUP \
+            az webapp config container set --name ${{ matrix.APP_NAME.app }} --resource-group ${{ env.RESOURCE_GROUP }} \
               --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} \
               --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --slot staging
-            URL=$(az webapp deployment slot list --resource-group ${RESOURCE_GROUP} --name ${{ matrix.APP_NAME.app }} --query "[?name=='staging'].defaultHostName" -o tsv)
+            URL=$(az webapp deployment slot list --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ matrix.APP_NAME.app }} --query "[?name=='staging'].defaultHostName" -o tsv)
             URL="${URL}/health"
-            az webapp restart --name ${{ matrix.APP_NAME.app }} --resource-group $RESOURCE_GROUP
+            az webapp restart --name ${{ matrix.APP_NAME.app }} --resource-group ${{ env.RESOURCE_GROUP }}
             timeout 300 bash -c "until [[ '$(curl -L -s -o /dev/null -w %{http_code} ${URL})' == '200' ]]; do sleep 5; echo -n .; done"
-            az webapp deployment slot swap -s staging --target-slot production -n "${{ matrix.APP_NAME.app }}" --resource-group "${RESOURCE_GROUP}"
+            az webapp deployment slot swap -s staging --target-slot production -n "${{ matrix.APP_NAME.app }}" --resource-group ${{ env.RESOURCE_GROUP }}
 
