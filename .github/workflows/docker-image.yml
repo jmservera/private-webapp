@@ -50,20 +50,20 @@ jobs:
           inlineScript: |
             az login --identity
 
-      - name: Get ACR login server
+      - name: Get ACR login server and token
         uses: azure/cli@v2
         with:
           azcliversion: latest      
           inlineScript: |
             echo "ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)" >> $GITHUB_ENV
+            echo "ACR_TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)" >> $GITHUB_ENV
 
       # build docker image
       - name: Build docker image
         run: |
           cd src/${{ matrix.APP_NAME.folder }}
-          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest .
-          TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
-          docker login ${{ env.ACR_LOGIN_SERVER }} --username 00000000-0000-0000-0000-000000000000 --password-stdin <<< $TOKEN
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest .          
+          docker login ${{ env.ACR_LOGIN_SERVER }} --username 00000000-0000-0000-0000-000000000000 --password-stdin <<< ${{ env.ACR_TOKEN }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest
 
