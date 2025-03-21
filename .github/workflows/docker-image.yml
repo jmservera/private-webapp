@@ -57,15 +57,25 @@ jobs:
           inlineScript: |
             echo "ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)" >> $GITHUB_ENV
 
-      - name: Build and Push Docker image
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            cd src/${{ matrix.APP_NAME.folder }}
-            # Build the image
-            az acr login -n ${{ env.ACR_NAME }} --expose-token
-            az acr build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest -r ${{ env.ACR_NAME }} .
+      # build docker image
+      - name: Build docker image
+        run: |
+          cd src/${{ matrix.APP_NAME.folder }}
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest .
+          TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
+          docker login ${{ env.ACR_LOGIN_SERVER }} --username 00000000-0000-0000-0000-000000000000 --password-stdin <<< $TOKEN
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest
+
+      # - name: Build and Push Docker image
+      #   uses: azure/cli@v2
+      #   with:
+      #     azcliversion: latest
+      #     inlineScript: |
+      #       cd src/${{ matrix.APP_NAME.folder }}
+      #       # Build the image
+      #       az acr login -n ${{ env.ACR_NAME }} --expose-token
+      #       az acr build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest -r ${{ env.ACR_NAME }} .
 
 
       - name: Deploy Docker image to Web App
