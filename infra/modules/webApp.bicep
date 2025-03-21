@@ -10,6 +10,7 @@ param prodAppSettings array = []
 param stagingAppSettings array = []
 param connectionStrings array = []
 param identityId string = ''
+param identityClientId string = ''
 param linuxFxVersion string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
@@ -37,12 +38,15 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
       http20Enabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      acrUseManagedIdentityCreds: true //(identityClientId == '') // Only set to true if using system identity
+      acrUserManagedIdentityID: identityClientId // Only set if using user assigned identity
       appSettings: concat(appSettings, prodAppSettings)
       connectionStrings: connectionStrings
       healthCheckPath: '/health'
       alwaysOn: true
     }
     virtualNetworkSubnetId: virtualNetworkSubnetId
+    vnetImagePullEnabled: true
   }
 
   identity: (identityId == '')
@@ -70,6 +74,8 @@ resource stagingSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
       http20Enabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      acrUseManagedIdentityCreds: true // (identityClientId == '') // Only set to true if using system identity
+      acrUserManagedIdentityID: identityClientId // Only set if using user assigned identity
       appSettings: concat(appSettings, stagingAppSettings)
       connectionStrings: connectionStrings
       healthCheckPath: '/health'

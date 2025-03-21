@@ -15,6 +15,7 @@ param zoneName string = ''
   'blob'
   'file'
   'sqlServer'
+  'registry'
 ])
 param targetSubResource string
 
@@ -25,6 +26,7 @@ var dnsByTarget = {
   blob: 'privatelink.blob.${environment().suffixes.storage}'
   file: 'privatelink.file.${environment().suffixes.storage}'
   sqlServer: 'privatelink${environment().suffixes.sqlServerHostname}' // dont' know why but sqlserverhostname suffix already contains the dot
+  registry: 'privatelink.azurecr.io'
 }
 
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-05-01' = {

@@ -122,13 +122,7 @@ module backEndApp './modules/webApp.bicep' = {
       }
     ]
     identityId: backendAppIdentity.outputs.resourceId
-    // connectionStrings: [
-    //   {
-    //     name: 'ConnectionString'
-    //     type: 'SQLAzure'
-    //     value: 'Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Authentication=Active Directory Managed Identity;Encrypt=true;Connection Timeout=30;'
-    //   }
-    // ]
+    identityClientId: backendAppIdentity.outputs.clientId
   }
 }
 
@@ -249,10 +243,11 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
   name: 'registry'
   params: {
     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
+    acrSku: 'Premium'
     location: location
     acrAdminUserEnabled: true
     tags: tags
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     roleAssignments: [
       {
         principalId: ghRunnerAppIdentity.outputs.principalId
@@ -263,6 +258,18 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
         )
       }
     ]
+  }
+}
+
+module containerRegistryPrivateEndpoint 'modules/privateEndpoint.bicep' = if (private) {
+  name: 'containerRegistryPrivateEndpoint'
+  params: {
+    name: '${namePrefix}-acr'
+    location: location
+    vnetId: vnet.outputs.vnetId
+    subnetId: vnet.outputs.privateSubnetId
+    privateLinkServiceId: containerRegistry.outputs.resourceId
+    targetSubResource: 'registry'
   }
 }
 
