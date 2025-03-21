@@ -83,9 +83,8 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
-            az webapp config container set --name ${{ matrix.APP_NAME.app }} --resource-group ${{ env.RESOURCE_GROUP }} \
-              --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} \
-              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} --slot staging
+            az webapp config container set --name "${{ matrix.APP_NAME.app }}" --resource-group ${{ env.RESOURCE_GROUP }} \
+              --container-image-name ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} --slot staging
             URL=$(az webapp deployment slot list --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ matrix.APP_NAME.app }} --query "[?name=='staging'].defaultHostName" -o tsv)
             URL="${URL}/health"
             az webapp restart --name ${{ matrix.APP_NAME.app }} --resource-group ${{ env.RESOURCE_GROUP }}
