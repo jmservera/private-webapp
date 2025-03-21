@@ -6,10 +6,12 @@ param vnetId string
 param privateLinkServiceId string
 param registrationEnabled bool = false
 param endpointName string = 'pe${name}${uniqueString(resourceGroup().id)}'
+param zoneName string = ''
 
 @allowed([
   'webpubsub'
   'sites'
+  'sites-staging'
   'blob'
   'file'
   'sqlServer'
@@ -19,6 +21,7 @@ param targetSubResource string
 var dnsByTarget = {
   webpubsub: 'privatelink.webpubsub.azure.com'
   sites: 'privatelink.azurewebsites.net'
+  'sites-staging': 'privatelink.azurewebsites.net'
   blob: 'privatelink.blob.${environment().suffixes.storage}'
   file: 'privatelink.file.${environment().suffixes.storage}'
   sqlServer: 'privatelink${environment().suffixes.sqlServerHostname}' // dont' know why but sqlserverhostname suffix already contains the dot
@@ -44,10 +47,14 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2022-05-01' = {
   }
 }
 
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (zoneName == '') {
   name: dnsByTarget[targetSubResource]
   location: 'global'
   dependsOn: [privateEndpoint]
+}
+
+resource existingPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = if (zoneName != '') {
+  name: zoneName
 }
 
 resource privateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-05-01' = {
@@ -58,14 +65,14 @@ resource privateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZ
       {
         name: 'privatelink-${endpointName}'
         properties: {
-          privateDnsZoneId: privateDnsZone.id
+          privateDnsZoneId: (zoneName == '') ? privateDnsZone.id : existingPrivateDnsZone.id
         }
       }
     ]
   }
 }
 
-resource vnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+resource vnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (zoneName == '') {
   parent: privateDnsZone
   name: '${endpointName}-link' // it's important to keep this name structure, otherwise the link will fail
   location: 'global'

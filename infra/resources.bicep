@@ -230,8 +230,9 @@ module backEndSlotPrivateEndpoint './modules/privateEndpoint.bicep' = if (privat
     location: location
     vnetId: vnet.outputs.vnetId
     subnetId: vnet.outputs.privateSubnetId
-    privateLinkServiceId: backEndApp.outputs.stagingId
-    targetSubResource: 'sites'
+    privateLinkServiceId: backEndApp.outputs.id // same as the main site, not the staging slot
+    targetSubResource: 'sites-staging' // use the slot name appended to sites-
+    zoneName: backEndPrivateEndpoint.outputs.zoneName
   }
 }
 
