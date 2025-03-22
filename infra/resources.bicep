@@ -62,15 +62,16 @@ module frontEndApp './modules/webApp.bicep' = {
       {
         name: 'BACKEND'
         value: backEndApp.outputs.url
-        slotSetting: true
       }
     ]
     stagingAppSettings: [
       {
         name: 'BACKEND'
         value: backEndApp.outputs.stagingUrl
-        slotSetting: true
       }
+    ]
+    webAppStickySettingsKeys: [
+      'BACKEND'
     ]
   }
 }

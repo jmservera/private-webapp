@@ -15,6 +15,8 @@ param linuxFxVersion string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest
 param healthCheckPath string = '/health'
 param alwaysOn bool = true
 
+param webAppStickySettingsKeys array = []
+
 var baseProperties = {
   properties: {
     serverFarmId: appServicePlan.id
@@ -70,24 +72,29 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
     })
   })
 
-  identity: identity
-}
-
-resource stagingSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
-  name: 'staging'
-  parent: site
-  location: location
-  properties: union(baseProperties, {
-    siteConfig: union(baseSiteConfig, {
-      appSettings: concat(appSettings, stagingAppSettings)
+  resource stagingSlot 'slots' = {
+    name: 'staging'
+    location: location
+    properties: union(baseProperties, {
+      siteConfig: union(baseSiteConfig, {
+        appSettings: concat(appSettings, stagingAppSettings)
+      })
     })
-  })
+    identity: identity
+  }
+
   identity: identity
+
+  resource slotsettings 'config' = {
+    name: 'slotConfigNames'
+    properties: {
+      appSettingNames: webAppStickySettingsKeys
+    }
+  }
 }
 
 output id string = site.id
 output name string = site.name
 output url string = 'https://${site.properties.defaultHostName}'
 output principalId string = identityId == '' ? site.identity.principalId : ''
-output stagingUrl string = 'https://${stagingSlot.properties.defaultHostName}'
-output stagingId string = stagingSlot.id
+output stagingUrl string = 'https://${site::stagingSlot.properties.defaultHostName}'
