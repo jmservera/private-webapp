@@ -16,100 +16,78 @@ on:
       - "src/frontend/**"
       - "src/backend/**"
 
+env:
+  RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  FRONTEND_APP_NAME: ${{ vars.FRONTEND_APP_NAME }}
+  BACKEND_APP_NAME: ${{ vars.BACKEND_APP_NAME }}
+  ACR_NAME: ${{ vars.ACR_NAME }}
+
 jobs:
-  build-and-deploy-frontend:
+  compute_values:
     runs-on: self-hosted
-    env:
-      RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
-      FRONTEND_APP_NAME: ${{ vars.FRONTEND_APP_NAME }}
-      ACR_NAME: ${{ vars.ACR_NAME }}
+    outputs:
+      FRONTEND_APP_NAME: ${{ env.FRONTEND_APP_NAME }}
+      BACKEND_APP_NAME: ${{ env.BACKEND_APP_NAME }}
+    steps:
+      - name: Compute outputs
+        run: |
+          echo "FRONTEND_APP_NAME=${{ env.FRONTEND_APP_NAME }}" >> $GITHUB_OUTPUT
+          echo "BACKEND_APP_NAME=${{ env.BACKEND_APP_NAME }}" >> $GITHUB_OUTPUT
 
+  build-and-deploy:
+    runs-on: self-hosted
+    needs: compute_values
+    strategy:
+      matrix:
+        APP_NAME: [{folder: frontend, app: "${{ needs.compute_values.outputs.FRONTEND_APP_NAME }}"}, { folder: backend, app: "${{ needs.compute_values.outputs.BACKEND_APP_NAME }}" }]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure CLI script
+      - name: Login with identity
         uses: azure/cli@v2
         with:
           azcliversion: latest
           inlineScript: |
             az login --identity
 
-      - name: Azure CLI script
+      - name: Get ACR login server and token
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest      
+          inlineScript: |
+            echo "ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)" >> $GITHUB_ENV
+            echo "ACR_TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)" >> $GITHUB_ENV
+
+      # build docker image
+      - name: Build docker image
+        run: |
+          cd src/${{ matrix.APP_NAME.folder }}
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest .          
+          docker login ${{ env.ACR_LOGIN_SERVER }} --username 00000000-0000-0000-0000-000000000000 --password-stdin <<< ${{ env.ACR_TOKEN }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest
+
+      # - name: Build and Push Docker image
+      #   uses: azure/cli@v2
+      #   with:
+      #     azcliversion: latest
+      #     inlineScript: |
+      #       cd src/${{ matrix.APP_NAME.folder }}
+      #       # Build the image
+      #       az acr login -n ${{ env.ACR_NAME }} --expose-token
+      #       az acr build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:latest -r ${{ env.ACR_NAME }} .
+
+
+      - name: Deploy Docker image to Web App
         uses: azure/cli@v2
         with:
           azcliversion: latest
           inlineScript: |
-            echo "ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer -o tsv)" >> $GITHUB_ENV
+            az webapp config container set --name "${{ matrix.APP_NAME.app }}" --resource-group ${{ env.RESOURCE_GROUP }} \
+              --container-image-name ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.APP_NAME.folder }}:${{ github.sha }} --slot staging
+            URL=$(az webapp deployment slot list --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ matrix.APP_NAME.app }} --query "[?name=='staging'].defaultHostName" -o tsv)
+            URL="${URL}/health"
+            az webapp restart --name ${{ matrix.APP_NAME.app }} --resource-group ${{ env.RESOURCE_GROUP }}
+            timeout 600 bash -c "until [[ $(curl -L -s -o /dev/null -w %{http_code} ${URL}) == '200' ]]; do sleep 5; echo -n .; done"
+            az webapp deployment slot swap -s staging --target-slot production -n "${{ matrix.APP_NAME.app }}" --resource-group ${{ env.RESOURCE_GROUP }}
 
-      - name: Build and Push Frontend Docker image
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            cd src/frontend
-            # Build the image
-            az acr build -t ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/frontend:latest -r $ACR_NAME .
-
-            # # Push to ACR using the az commands
-            # az acr login --name $ACR_NAME
-            # docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }}
-            # docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
-
-
-      - name: Deploy Frontend Docker image
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            az webapp config container set --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP \
-              --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ github.sha }} \
-              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }}
-            az webapp restart --name $FRONTEND_APP_NAME --resource-group $RESOURCE_GROUP
-
-  build-and-deploy-backend:
-    runs-on: self-hosted
-    env:
-      RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
-      BACKEND_APP_NAME: ${{ vars.BACKEND_APP_NAME }}
-      ACR_NAME: ${{ vars.ACR_NAME }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Azure CLI script
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            az login --identity
-
-      - name: Azure CLI script
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            echo "ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer -o tsv)" >> $GITHUB_ENV
-
-      - name: Build and Push Backend Docker image
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            cd src/backend
-            # Build the image
-            az acr build -t ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} -t ${{ env.ACR_LOGIN_SERVER }}/backend:latest -r $ACR_NAME .
-
-            # # Push to ACR using the az commands
-            # az acr login --name $ACR_NAME
-            # docker push ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }}
-            # docker push ${{ env.ACR_LOGIN_SERVER }}/backend:latest
-
-      - name: Deploy Backend to Web App
-        uses: azure/cli@v2
-        with:
-          azcliversion: latest
-          inlineScript: |
-            az webapp config container set --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP \
-              --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} \
-              --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} 
-            az webapp restart --name $BACKEND_APP_NAME --resource-group $RESOURCE_GROUP

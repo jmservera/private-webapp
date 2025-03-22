@@ -3,32 +3,16 @@
 name: private-webapp
 hooks:
   preup:
-    run: |
-      echo "Setting up environment variables..."
-      azd env set CLIENT_IP_ADDRESS $(curl ifconfig.me 2>/dev/null | tr -d '\r')
-      echo "Done"
+    run: ./scripts/prepare.sh
     interactive: true
     shell: sh
   postup:
     run: ./scripts/set-github-vars.sh
     interactive: true
-  # predown:
-  #   shell: sh
-  #   run: |
-  #     echo "Loading azd .env file from current environment"
-  #     AZURE_RESOURCE_GHRUNNER_NAME=$(azd env get-value "AZURE_RESOURCE_GHRUNNER_NAME")
-  #     RESOURCE_GROUP=$(azd env get-value "RESOURCE_GROUP")
-  #     echo "Cleaning up gh runner..."
-  #     az vm run-command invoke  --command-id RunShellScript --name "${AZURE_RESOURCE_GHRUNNER_NAME}" -g "${RESOURCE_GROUP}" --scripts @scripts/uninstall-action-runner.sh
-  #     echo "Done"
-  #   interactive: true
-# predeploy:
-#   run: ./scripts/predeploy.sh
-#   interactive: true
-# services:
-#   ghRunner:
-#     project: src/github
-#     host: containerapp
-#     language: js
-#     docker:
-#       path: Dockerfile
+  postdown:
+    run: |
+      echo "Cleaning up resources..."
+      azd env set FRONTEND_CONTAINER_IMAGE ""
+      azd env set BACKEND_CONTAINER_IMAGE ""
+    interactive: true
+    shell: sh

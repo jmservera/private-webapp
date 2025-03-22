@@ -50,7 +50,8 @@ gh variable set FRONTEND_APP_NAME -b "$FRONTEND_APP_NAME" --repo $REPO_OWNER/$RE
 gh variable set BACKEND_APP_NAME -b "$BACKEND_APP_NAME" --repo $REPO_OWNER/$REPO_NAME
 
 # Run the workflow to build and push the Docker images
-echo "Running the workflow to build and push the Docker images..."
-gh workflow run docker-image.yml --repo $REPO_OWNER/$REPO_NAME
+CURRENT_BRANCH=$(git branch --show-current)
+echo "Running the workflow on branch $CURRENT_BRANCH to build and push the Docker images..."
+gh workflow run docker-image.yml --repo $REPO_OWNER/$REPO_NAME --ref $CURRENT_BRANCH
 
 echo "GitHub variables set successfully!"

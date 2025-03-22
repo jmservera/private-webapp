@@ -1,13 +1,55 @@
 param name string
-param location string
+param location string = resourceGroup().location
 param planName string
 param skuName string = 'S1'
 param skuTier string = 'Standard'
 param publicNetworkAccess string = 'Enabled'
 param virtualNetworkSubnetId string = ''
 param appSettings array = []
+param prodAppSettings array = []
+param stagingAppSettings array = []
 param connectionStrings array = []
 param identityId string = ''
+param identityClientId string = ''
+param linuxFxVersion string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+param healthCheckPath string = '/health'
+param alwaysOn bool = true
+
+var slotSettingsNames = [for settings in concat(prodAppSettings, stagingAppSettings): settings.name]
+var slotSettingsUniqueNames = union(slotSettingsNames, [])
+
+var baseProperties = {
+  properties: {
+    serverFarmId: appServicePlan.id
+    publicNetworkAccess: publicNetworkAccess
+    httpsOnly: true
+    virtualNetworkSubnetId: virtualNetworkSubnetId
+    vnetImagePullEnabled: true
+  }
+}
+
+var baseSiteConfig = {
+  linuxFxVersion: linuxFxVersion
+  http20Enabled: true
+  minTlsVersion: '1.2'
+  ftpsState: 'Disabled'
+  acrUseManagedIdentityCreds: true // (identityClientId == '') // Only set to true if using system identity
+  acrUserManagedIdentityID: identityClientId // Only set if using user assigned identity
+  connectionStrings: connectionStrings
+  healthCheckPath: healthCheckPath
+  alwaysOn: alwaysOn
+}
+
+var identity = (identityId == '')
+  ? {
+      type: 'SystemAssigned'
+    }
+  : {
+      type: 'UserAssigned'
+      userAssignedIdentities: {
+        '${identityId}': {}
+      }
+    }
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: planName
@@ -25,34 +67,35 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
 resource site 'Microsoft.Web/sites@2022-09-01' = {
   name: name
   location: location
-  properties: {
-    serverFarmId: appServicePlan.id
-    publicNetworkAccess: publicNetworkAccess
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
-      http20Enabled: true
-      minTlsVersion: '1.2'
-      ftpsState: 'Disabled'
-      appSettings: appSettings
-      connectionStrings: connectionStrings
-      healthCheckPath: '/health'
-    }
-    virtualNetworkSubnetId: virtualNetworkSubnetId
+  properties: union(baseProperties, {
+    siteConfig: union(baseSiteConfig, {
+      appSettings: concat(appSettings, prodAppSettings)
+    })
+  })
+
+  resource stagingSlot 'slots' = {
+    name: 'staging'
+    location: location
+    properties: union(baseProperties, {
+      siteConfig: union(baseSiteConfig, {
+        appSettings: concat(appSettings, stagingAppSettings)
+      })
+    })
+    identity: identity
   }
-  identity: (identityId == '')
-    ? {
-        type: 'SystemAssigned'
-      }
-    : {
-        type: 'UserAssigned'
-        userAssignedIdentities: {
-          '${identityId}': {}
-        }
-      }
+
+  identity: identity
+
+  resource slotsettings 'config' = {
+    name: 'slotConfigNames'
+    properties: {
+      appSettingNames: slotSettingsUniqueNames
+    }
+  }
 }
 
 output id string = site.id
 output name string = site.name
 output url string = 'https://${site.properties.defaultHostName}'
-output principalId string = identityId==''? site.identity.principalId : ''
+output principalId string = identityId == '' ? site.identity.principalId : ''
+output stagingUrl string = 'https://${site::stagingSlot.properties.defaultHostName}'

@@ -4,9 +4,6 @@ param sqlAdminLogin string = 'sqladmin'
 @secure()
 param sqlAdminPassword string
 param tags object = {}
-// @description('Id of the user or app to assign application roles')
-// param userSID string
-// param aadUserName string
 @description('GH Runner VM admin password if needed, you may leave it empty if using key authentication')
 @secure()
 param adminPassword string = ''
@@ -24,10 +21,10 @@ param githubPAT string
 @description('The IP address of the current client that is running the azd up command, used for setting firewall rules for the storage account.')
 param clientIpAddress string
 
-@description('Set to false to make the critical resources public. Use this only for testing.')
-param private bool = true
-
 param ValuesTableName string = 'Value_Store'
+
+param frontendContainerImage string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
+param backendContainerImage string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -37,7 +34,6 @@ module vnet './modules/vnet.bicep' = {
   name: 'vnet'
   params: {
     namePrefix: namePrefix
-    location: location
   }
 }
 
@@ -46,17 +42,13 @@ module frontEndApp './modules/webApp.bicep' = {
   name: 'frontEndApp'
   params: {
     name: '${namePrefix}-frontend'
-    location: location
     planName: '${namePrefix}-frontPlan'
     skuName: 'S1'
     skuTier: 'Standard'
     publicNetworkAccess: 'Enabled'
+    linuxFxVersion: frontendContainerImage
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
     appSettings: [
-      {
-        name: 'BACKEND'
-        value: backEndApp.outputs.url
-      }
       {
         name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
         value: '~3'
@@ -66,6 +58,18 @@ module frontEndApp './modules/webApp.bicep' = {
         value: monitoring.outputs.applicationInsightsConnectionString
       }
     ]
+    prodAppSettings: [
+      {
+        name: 'BACKEND'
+        value: backEndApp.outputs.url
+      }
+    ]
+    stagingAppSettings: [
+      {
+        name: 'BACKEND'
+        value: backEndApp.outputs.stagingUrl
+      }
+    ]
   }
 }
 
@@ -73,7 +77,6 @@ module backendAppIdentity 'br/public:avm/res/managed-identity/user-assigned-iden
   name: 'backendAppIdentity'
   params: {
     name: '${abbrs.managedIdentityUserAssignedIdentities}backend-${resourceToken}'
-    location: location
   }
 }
 
@@ -82,11 +85,11 @@ module backEndApp './modules/webApp.bicep' = {
   name: 'backEndApp'
   params: {
     name: '${namePrefix}-backend'
-    location: location
     planName: '${namePrefix}-backPlan'
     skuName: 'S1'
     skuTier: 'Standard'
     publicNetworkAccess: 'Disabled'
+    linuxFxVersion: backendContainerImage
     virtualNetworkSubnetId: vnet.outputs.appSubnetId
     appSettings: [
       {
@@ -107,13 +110,7 @@ module backEndApp './modules/webApp.bicep' = {
       }
     ]
     identityId: backendAppIdentity.outputs.resourceId
-    // connectionStrings: [
-    //   {
-    //     name: 'ConnectionString'
-    //     type: 'SQLAzure'
-    //     value: 'Server=tcp:${sqlDb.outputs.serverName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDb.outputs.databaseName};Authentication=Active Directory Managed Identity;Encrypt=true;Connection Timeout=30;'
-    //   }
-    // ]
+    identityClientId: backendAppIdentity.outputs.clientId
   }
 }
 
@@ -123,20 +120,29 @@ module sqlDb './modules/sqlDatabase.bicep' = {
   params: {
     serverName: '${namePrefix}-sqlserver'
     databaseName: '${namePrefix}-db'
-    location: location
     adminLogin: sqlAdminLogin
     adminPassword: sqlAdminPassword
     deploymentIdentityName: ghRunnerAppIdentity.outputs.name
     deploymentIdentityClientId: ghRunnerAppIdentity.outputs.clientId
-    deploymentIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
-    deploymentIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
+    subnetId: vnet.outputs.privateSubnetId
+    vnetId: vnet.outputs.vnetId
+  }
+}
+
+module dbScript 'modules/sqlScript.bicep' = {
+  name: 'dbScript'
+  params: {
+    sqlServerEndpoint: sqlDb.outputs.endpoint
+    databaseName: sqlDb.outputs.databaseName
     scriptRunnerSubnetId: vnet.outputs.ciSubnetId
-    storageSubnetId: vnet.outputs.privateSubnetId
     vnetId: vnet.outputs.vnetId
     clientIpAddress: clientIpAddress
+    deploymentIdentityResourceId: ghRunnerAppIdentity.outputs.resourceId
+    deploymentIdentityPrincipalId: ghRunnerAppIdentity.outputs.principalId
     appIdentityName: backendAppIdentity.outputs.name
     appIdentityClientId: backendAppIdentity.outputs.clientId
-    private: private
+    deploymentIdentityClientId: ghRunnerAppIdentity.outputs.clientId
+    subnetId: vnet.outputs.privateSubnetId
   }
 }
 
@@ -196,11 +202,10 @@ module backendWebAppAcrPull 'br/public:avm/ptn/authorization/resource-role-assig
 }
 
 // Private endpoint for backend
-module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = if (private) {
+module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = {
   name: 'backEndPrivateEndpoint'
   params: {
     name: '${namePrefix}-backend'
-    location: location
     vnetId: vnet.outputs.vnetId
     subnetId: vnet.outputs.privateSubnetId
     privateLinkServiceId: backEndApp.outputs.id
@@ -208,11 +213,22 @@ module backEndPrivateEndpoint './modules/privateEndpoint.bicep' = if (private) {
   }
 }
 
+module backEndSlotPrivateEndpoint './modules/privateEndpoint.bicep' = {
+  name: 'backEndSlotPrivateEndpoint'
+  params: {
+    name: '${namePrefix}-backend-staging'
+    vnetId: vnet.outputs.vnetId
+    subnetId: vnet.outputs.privateSubnetId
+    privateLinkServiceId: backEndApp.outputs.id // same as the main site, not the staging slot
+    targetSubResource: 'sites-staging' // use the slot name appended to sites-
+    zoneName: backEndPrivateEndpoint.outputs.zoneName
+  }
+}
+
 module ghRunnerAppIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.2.1' = {
   name: 'ghappidentity'
   params: {
     name: '${abbrs.managedIdentityUserAssignedIdentities}gh-${resourceToken}'
-    location: location
   }
 }
 
@@ -221,10 +237,10 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
   name: 'registry'
   params: {
     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
-    location: location
+    acrSku: 'Premium'
     acrAdminUserEnabled: true
     tags: tags
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     roleAssignments: [
       {
         principalId: ghRunnerAppIdentity.outputs.principalId
@@ -238,13 +254,23 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
   }
 }
 
+module containerRegistryPrivateEndpoint 'modules/privateEndpoint.bicep' = {
+  name: 'containerRegistryPrivateEndpoint'
+  params: {
+    name: '${namePrefix}-acr'
+    vnetId: vnet.outputs.vnetId
+    subnetId: vnet.outputs.privateSubnetId
+    privateLinkServiceId: containerRegistry.outputs.resourceId
+    targetSubResource: 'registry'
+  }
+}
+
 module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
   name: 'monitoring'
   params: {
     logAnalyticsName: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
     applicationInsightsName: '${abbrs.insightsComponents}${resourceToken}'
     applicationInsightsDashboardName: '${abbrs.portalDashboards}${resourceToken}'
-    location: location
     tags: tags
   }
 }
@@ -292,7 +318,6 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
     // Non-required parameters
     disablePasswordAuthentication: empty(adminPassword) ? true : false
     adminPassword: adminPassword
-    location: location
     publicKeys: empty(publicKey)
       ? null
       : [
@@ -307,7 +332,6 @@ module ghRunner 'br/public:avm/res/compute/virtual-machine:0.12.1' = {
 module ghRunnerScriptExtension './modules/ghScript.bicep' = {
   name: 'ghRunnerScriptExtension'
   params: {
-    location: location
     ghRunnerName: ghRunner.outputs.name
     repo_name: repo_name
     repo_owner: repo_owner
@@ -323,14 +347,9 @@ output frontendId string = frontEndApp.outputs.id
 output backendId string = backEndApp.outputs.id
 output sqlServerId string = sqlDb.outputs.serverId
 
-// output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
-// output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_RESOURCE_GHRUNNER_ID string = ghRunner.outputs.resourceId
 output acrName string = containerRegistry.outputs.name
 output acrLoginServer string = containerRegistry.outputs.loginServer
-output resourceGroup string = resourceGroup().name
 output sqlServerEndpoint string = sqlDb.outputs.endpoint
 output sqlDatabaseName string = sqlDb.outputs.databaseName
 output AZURE_RESOURCE_GHRUNNER_NAME string = ghRunner.outputs.name
-output GITHUB_RUNNER_RESULT object = ghRunnerScriptExtension.outputs.ghRunnnerExtensionResult
-// .instanceView.value
