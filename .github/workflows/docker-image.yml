@@ -88,6 +88,6 @@ jobs:
             URL=$(az webapp deployment slot list --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ matrix.APP_NAME.app }} --query "[?name=='staging'].defaultHostName" -o tsv)
             URL="${URL}/health"
             az webapp restart --name ${{ matrix.APP_NAME.app }} --resource-group ${{ env.RESOURCE_GROUP }}
-            timeout 600 bash -c "until [[ '$(curl -L -s -o /dev/null -w %{http_code} ${URL})' == '200' ]]; do sleep 5; echo -n .; done"
+            timeout 600 bash -c "until [[ $(curl -L -s -o /dev/null -w %{http_code} ${URL}) == '200' ]]; do sleep 5; echo -n .; done"
             az webapp deployment slot swap -s staging --target-slot production -n "${{ matrix.APP_NAME.app }}" --resource-group ${{ env.RESOURCE_GROUP }}
 
