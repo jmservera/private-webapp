@@ -15,7 +15,7 @@ param linuxFxVersion string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest
 param healthCheckPath string = '/health'
 param alwaysOn bool = true
 
-var slotSettingsNames = [for settings in concat(prodAppSettings, stagingAppSettings): { name: settings.name }]
+var slotSettingsNames = [for settings in concat(prodAppSettings, stagingAppSettings): settings.name]
 var slotSettingsUniqueNames = union(slotSettingsNames, [])
 
 var baseProperties = {
