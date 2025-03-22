@@ -113,7 +113,7 @@ The repository includes several scripts to automate setup and management tasks:
 - [`scripts/install-packages.sh`](scripts/install-packages.sh): Installs dependencies and configures GitHub Actions runners on the VM. By default, it creates two runner instances for parallel CI/CD jobs.
 - [`scripts/create-sql-user.sh`](scripts/create-sql-user.sh): Initializes the SQL database and configures the managed identity access. Uses a trick to avoid needing a highly privileged user for adding the managed identity to the database.
 - [`scripts/set-github-vars.sh`](scripts/set-github-vars.sh): Sets GitHub repository variables required for CI/CD workflows after running `azd up`. Then it launches the CI/CD pipeline.
-
+- [`scripts/create-sql-user.sh`](scripts/create-sql-user.sh): Initializes the SQL database and configures the managed identity access. Uses a trick to avoid needing a highly privileged user for adding the managed identity to the database.
 
 These scripts are automatically executed during deployment and VM provisioning.
 
