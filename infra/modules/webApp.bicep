@@ -15,7 +15,8 @@ param linuxFxVersion string = 'DOCKER|mcr.microsoft.com/appsvc/staticsite:latest
 param healthCheckPath string = '/health'
 param alwaysOn bool = true
 
-param webAppStickySettingsKeys array = []
+var slotSettingsNames = [for settings in concat(prodAppSettings, stagingAppSettings): { name: settings.name }]
+var slotSettingsUniqueNames = union(slotSettingsNames, [])
 
 var baseProperties = {
   properties: {
@@ -88,7 +89,7 @@ resource site 'Microsoft.Web/sites@2022-09-01' = {
   resource slotsettings 'config' = {
     name: 'slotConfigNames'
     properties: {
-      appSettingNames: webAppStickySettingsKeys
+      appSettingNames: slotSettingsUniqueNames
     }
   }
 }

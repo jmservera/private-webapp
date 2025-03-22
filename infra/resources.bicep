@@ -70,9 +70,6 @@ module frontEndApp './modules/webApp.bicep' = {
         value: backEndApp.outputs.stagingUrl
       }
     ]
-    webAppStickySettingsKeys: [
-      'BACKEND'
-    ]
   }
 }
 
