@@ -41,7 +41,7 @@ jobs:
       matrix:
         APP_NAME: [{folder: frontend, app: "${{ needs.compute_values.outputs.FRONTEND_APP_NAME }}"}, { folder: backend, app: "${{ needs.compute_values.outputs.BACKEND_APP_NAME }}" }]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Login with identity
         uses: azure/cli@v2
